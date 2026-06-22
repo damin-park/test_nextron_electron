@@ -1,0 +1,78 @@
+/*
+ * Material Design 3 Dark Theme variables
+ * tkinter material_theme.py 의 색상/타이포 시스템을 그대로 옮긴 것.
+ */
+
+:root {
+  /* Surface Colors (배경) */
+  --md3-surface: #121212;
+  --md3-surface-bright: #2a2a2a;
+
+  /* Surface Containers (Elevation) */
+  --md3-surface-container-lowest: #0d0d0d;
+  --md3-surface-container-low: #171717;
+  --md3-surface-container: #1e1e1e;
+  --md3-surface-container-high: #242424;
+  --md3-surface-container-highest: #2b2b2b;
+
+  /* Primary (neutral grayscale) */
+  --md3-primary: #e0e0e0;
+  --md3-on-primary: #111111;
+  --md3-primary-container: #2f2f2f;
+  --md3-on-primary-container: #f2f2f2;
+
+  /* Secondary */
+  --md3-secondary: #bdbdbd;
+  --md3-on-secondary: #111111;
+  --md3-secondary-container: #303030;
+  --md3-on-secondary-container: #e6e6e6;
+
+  /* Tertiary (red accent 210,0,0) */
+  --md3-tertiary: #d20000;
+  --md3-on-tertiary: #ffffff;
+  --md3-tertiary-container: #8b1610;
+  --md3-on-tertiary-container: #ffd9d4;
+
+  /* Text */
+  --md3-on-surface: #f2f2f2;
+  --md3-on-surface-variant: #c7c7c7;
+  --md3-text-disabled: #666666;
+  --md3-outline: #7a7a7a;
+  --md3-outline-variant: #3f3f3f;
+
+  /* Error */
+  --md3-error: #f2b8b5;
+  --md3-on-error: #601410;
+  --md3-error-container: #8c1d18;
+  --md3-on-error-container: #f9dedc;
+
+  /* State Layers */
+  --md3-state-hover: #1f1f1f;
+  --md3-state-focus: #2a2a2a;
+  --md3-state-pressed: #2a2a2a;
+
+  /* Badge / banner accents */
+  --badge-red: #e6231c;
+  --badge-results: #d20000;
+  --banner-warning-bg: #5c1e1e;
+  --banner-success-bg: #163c24;
+  --banner-safe-stop-bg: #5c4b1e;
+  --banner-connection-bg: #5c4b1e;
+
+  /* Layout 상수 (main_window.py) */
+  --menu-height: 30px;
+  --side-menu-width: 70px;
+  --version-label-height: 22px;
+  --connection-banner-height: 26px;
+  --dashboard-height: 84px;
+  --dashboard-compact-height: 64px;
+  --recipe-control-width: 325px;
+  --min-recipe-control-width: 260px;
+  --min-graph-panel-width: 420px;
+  --splitter-width: 4px;
+  --area-gap: 1px;
+
+  /* Typography */
+  --font-base: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-medium: 'Roboto Medium', 'Roboto', 'Segoe UI', system-ui, sans-serif;
+}

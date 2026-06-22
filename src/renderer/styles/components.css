@@ -1,0 +1,343 @@
+/* ──────────────────────────────────────────────────────────
+ * Menu Bar (component/menu.py)
+ * ────────────────────────────────────────────────────────── */
+.menu-bar__items {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  height: 100%;
+}
+
+.menu-bar__item {
+  font-family: var(--font-medium);
+  font-size: 13px;
+  color: var(--md3-on-surface-variant);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: default;
+  line-height: 1;
+}
+
+.menu-bar__item:hover {
+  background: #3a3a3a;
+  color: var(--md3-on-surface);
+}
+
+.menu-bar__spacer {
+  flex: 1 1 auto;
+}
+
+.menu-bar__version {
+  font-family: var(--font-medium);
+  font-size: 12px;
+  color: var(--md3-text-disabled);
+  padding-right: 8px;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Side Menu (component/side_menu)
+ * ────────────────────────────────────────────────────────── */
+.side-menu__group {
+  display: flex;
+  flex-direction: column;
+}
+
+.side-menu__group--top {
+  flex: 1 1 auto;
+  padding-top: 12px;
+}
+
+.side-menu__group--bottom {
+  flex: 0 0 auto;
+  padding-bottom: 4px;
+}
+
+.side-menu__item {
+  position: relative;
+  height: 86px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--md3-text-disabled);
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.side-menu__item:hover {
+  color: var(--md3-on-surface-variant);
+}
+
+.side-menu__item.is-selected {
+  color: var(--md3-on-surface);
+}
+
+.side-menu__item.is-disabled {
+  color: var(--md3-text-disabled);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.side-menu__item.is-hidden {
+  display: none;
+}
+
+/* 선택 표시 바 (좌측 세로 빨강 바) */
+.side-menu__item.is-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 54px;
+  background: var(--md3-tertiary);
+  border-radius: 0 2px 2px 0;
+}
+
+.side-menu__icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.side-menu__icon svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+
+.side-menu__label {
+  font-family: var(--font-medium);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* 알림 배지 */
+.side-menu__badge {
+  position: absolute;
+  top: 18px;
+  right: 14px;
+  min-width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--badge-red);
+  display: none;
+}
+
+.side-menu__item.has-badge .side-menu__badge {
+  display: block;
+}
+
+/* 버전 라벨 (좌하단) */
+.version-label {
+  flex: 0 0 var(--version-label-height);
+  height: var(--version-label-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-medium);
+  font-size: 11px;
+  color: var(--md3-text-disabled);
+  cursor: default;
+  border-top: 1px solid var(--md3-outline-variant);
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Connection Banner (top_banner_manager.py)
+ * ────────────────────────────────────────────────────────── */
+.connection-banner {
+  flex: 0 0 var(--connection-banner-height);
+  height: var(--connection-banner-height);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-family: var(--font-medium);
+  font-size: 12px;
+  color: var(--md3-on-surface);
+  background: var(--md3-surface-container-low);
+  overflow: hidden;
+}
+
+.connection-banner.is-hidden {
+  visibility: hidden;
+}
+
+.connection-banner--warning {
+  background: var(--banner-warning-bg);
+}
+
+.connection-banner--success {
+  background: var(--banner-success-bg);
+}
+
+.connection-banner--safe-stop,
+.connection-banner--connection {
+  background: var(--banner-connection-bg);
+}
+
+.connection-banner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--md3-tertiary);
+  margin-right: 8px;
+  flex: 0 0 auto;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Dashboard (dashboard_manager.py)
+ * ────────────────────────────────────────────────────────── */
+.dashboard {
+  flex: 0 0 var(--dashboard-height);
+  height: var(--dashboard-height);
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--md3-surface);
+  border-bottom: 1px solid var(--md3-outline-variant);
+  overflow-x: auto;
+}
+
+.dashboard__panel {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--md3-surface-container);
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 8px;
+  min-width: 150px;
+}
+
+.dashboard__badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-medium);
+  font-size: 13px;
+  color: var(--md3-on-surface);
+  background: var(--md3-surface-container-highest);
+  flex: 0 0 auto;
+}
+
+.dashboard__readings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard__row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.dashboard__row-label {
+  color: var(--md3-text-disabled);
+  font-family: var(--font-medium);
+  width: 22px;
+}
+
+.dashboard__row-value {
+  color: var(--md3-on-surface);
+  font-family: var(--font-medium);
+  font-size: 14px;
+  min-width: 56px;
+}
+
+.dashboard__row-unit {
+  color: var(--md3-on-surface-variant);
+  font-size: 11px;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Control Panel (recipe / manual / iv)
+ * ────────────────────────────────────────────────────────── */
+.control-panel {
+  flex: 0 0 var(--recipe-control-width);
+  width: var(--recipe-control-width);
+  min-width: var(--min-recipe-control-width);
+  display: flex;
+  flex-direction: column;
+  background: var(--md3-surface-container-low);
+  border-right: 1px solid var(--md3-outline-variant);
+  overflow: hidden;
+}
+
+.control-panel__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--md3-outline-variant);
+  font-family: var(--font-medium);
+  font-size: 15px;
+  color: var(--md3-on-surface);
+}
+
+.control-panel__mode {
+  display: none;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.control-panel__mode.is-active {
+  display: flex;
+}
+
+.control-panel__placeholder {
+  color: var(--md3-text-disabled);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Splitter
+ * ────────────────────────────────────────────────────────── */
+.splitter {
+  flex: 0 0 var(--splitter-width);
+  width: var(--splitter-width);
+  background: var(--md3-surface);
+  cursor: col-resize;
+}
+
+.splitter:hover,
+.splitter.is-dragging {
+  background: var(--md3-outline-variant);
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Graph Panel
+ * ────────────────────────────────────────────────────────── */
+.graph-panel {
+  flex: 1 1 auto;
+  min-width: var(--min-graph-panel-width);
+  display: flex;
+  flex-direction: column;
+  background: var(--md3-surface);
+  overflow: hidden;
+}
+
+.graph-panel__placeholder {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md3-text-disabled);
+  font-size: 13px;
+}

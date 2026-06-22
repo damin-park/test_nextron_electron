@@ -1,0 +1,82 @@
+/*
+ * 메인 윈도우 레이아웃.
+ * tkinter MainWindow 의 place() 절대배치를 flex 기반으로 재현한다.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-base);
+  color: var(--md3-on-surface);
+  background: var(--md3-surface);
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100vh;
+  min-width: 1366px;
+  min-height: 736px;
+}
+
+/* 전체 윈도우: 세로 stack (메뉴바 / 본문) */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--md3-surface-container);
+}
+
+/* 메뉴바 (상단 full width) */
+.menu-bar {
+  flex: 0 0 var(--menu-height);
+  height: var(--menu-height);
+  display: flex;
+  align-items: center;
+  background: var(--md3-surface-container-high);
+  border-bottom: 1px solid var(--md3-outline-variant);
+  padding: 0 6px;
+}
+
+/* 본문: 좌측 사이드메뉴 + 우측 메인콘텐츠 */
+.app-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  gap: var(--area-gap);
+}
+
+/* 사이드 메뉴 (좌측 70px, 전체 높이) */
+.side-menu {
+  flex: 0 0 var(--side-menu-width);
+  width: var(--side-menu-width);
+  display: flex;
+  flex-direction: column;
+  background: var(--md3-surface);
+  border-right: 1px solid var(--md3-outline-variant);
+}
+
+/* 메인 콘텐츠 (배너/대시보드/작업영역) */
+.main-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: var(--area-gap);
+}
+
+/* 작업 영역: 컨트롤패널 + 스플리터 + 그래프 */
+.work-area {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  gap: 0;
+}

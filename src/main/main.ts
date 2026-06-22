@@ -23,8 +23,12 @@ if (!gotSingleInstanceLock) {
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1366,
+    height: 768,
+    minWidth: 1366,
+    minHeight: 736,
+    backgroundColor: '#121212',
+    title: 'Nextron Integrated Program',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
