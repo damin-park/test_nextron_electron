@@ -7,6 +7,11 @@ import {
   startPythonBackend,
   stopPythonBackend,
 } from './python-backend';
+import {
+  closeSplashWindow,
+  createSplashWindow,
+  setSplashStatus,
+} from './splash-window';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -29,6 +34,7 @@ const createWindow = () => {
     minWidth: 1366,
     minHeight: 768,
     autoHideMenuBar: true,
+    show: false,
     backgroundColor: '#121212',
     title: 'Nextron Integrated Program',
     webPreferences: {
@@ -50,6 +56,8 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  return mainWindow;
 };
 
 ipcMain.handle('backend:get-info', () => getBackendInfo());
@@ -59,8 +67,29 @@ ipcMain.handle('backend:health', () => checkBackendHealth());
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
+  // 1. 스플래시 먼저 표시
+  const splashShownAt = Date.now();
+  createSplashWindow();
+
+  // 2. 백엔드 로딩 (스플래시에 상태 표시)
+  setSplashStatus('Starting backend...');
   await startPythonBackend();
-  createWindow();
+
+  setSplashStatus('Loading Main Screen...');
+
+  // 3. 메인 윈도우 생성 (콘텐츠 로드 완료 후 표시 + 스플래시 닫기)
+  //    백엔드가 이미 떠 있어 즉시 반환되어도 스플래시가 최소 시간 보이도록 보장한다.
+  const SPLASH_MIN_MS = 1500;
+  const window = createWindow();
+  window.once('ready-to-show', () => {
+    const elapsed = Date.now() - splashShownAt;
+    const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+    setTimeout(() => {
+      closeSplashWindow();
+      window.show();
+      window.focus();
+    }, remaining);
+  });
 });
 
 app.on('second-instance', () => {
@@ -92,7 +121,11 @@ app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    const window = createWindow();
+    window.once('ready-to-show', () => {
+      window.show();
+      window.focus();
+    });
   }
 });
 

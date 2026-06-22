@@ -17,8 +17,7 @@ import { createDashboard } from './dashboard';
 import { createControlPanel } from './controlPanel';
 import { createGraphPanel } from './graphPanel';
 import { RECIPE, type ControlMode } from './types';
-
-const APP_VERSION = 'v1.0.0';
+import { APP_VERSION } from '../../shared/app-version';
 
 // main_window.py 의 폭 제약
 const MIN_CONTROL_WIDTH = 260;
