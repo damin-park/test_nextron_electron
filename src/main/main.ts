@@ -6,6 +6,7 @@ import {
   getBackendConnection,
   getBackendInfo,
   getBackendStatus,
+  getRegisteredDevicesSummary,
   setSystemEventListener,
   startPythonBackend,
   stopPythonBackend,
@@ -15,6 +16,10 @@ import {
   createSplashWindow,
   setSplashStatus,
 } from './splash-window';
+import {
+  closeInitConnectWindow,
+  createInitConnectWindow,
+} from './init-connect-window';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -71,6 +76,38 @@ ipcMain.handle('app:request-shutdown', () => {
   app.quit();
 });
 
+const SPLASH_MIN_MS = 1500;
+
+/**
+ * 메인 윈도우를 생성하고, 콘텐츠 로드 완료 후 표시한다.
+ * splashShownAt 이 주어지면 스플래시가 최소 시간 보이도록 보장한 뒤 닫는다.
+ */
+const showMainWindow = (splashShownAt?: number) => {
+  const window = createWindow();
+  window.once('ready-to-show', () => {
+    const elapsed = splashShownAt ? Date.now() - splashShownAt : SPLASH_MIN_MS;
+    const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+    setTimeout(() => {
+      closeSplashWindow();
+      window.show();
+      window.focus();
+    }, remaining);
+  });
+};
+
+// Init Connect 완료: 팝업을 닫고 메인 윈도우를 표시한다.
+ipcMain.handle('init-connect:complete', () => {
+  closeInitConnectWindow();
+  showMainWindow();
+});
+
+// Init Connect 취소/닫기: 등록 완료 전 Main GUI 를 띄우지 않고 앱을 종료한다.
+// (tkinter 는 스킵 후 Main 진입이 가능했으나, 안전 규칙에 따라 종료로 처리 — 문서화된 차이)
+ipcMain.handle('init-connect:cancel', () => {
+  closeInitConnectWindow();
+  app.quit();
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -90,21 +127,25 @@ app.on('ready', async () => {
   setSplashStatus('Starting backend...');
   await startPythonBackend();
 
-  setSplashStatus('Loading Main Screen...');
+  // 3. 등록된 장비 확인 → 흐름 분기
+  setSplashStatus('Checking registered devices...');
+  const summary = await getRegisteredDevicesSummary();
 
-  // 3. 메인 윈도우 생성 (콘텐츠 로드 완료 후 표시 + 스플래시 닫기)
-  //    백엔드가 이미 떠 있어 즉시 반환되어도 스플래시가 최소 시간 보이도록 보장한다.
-  const SPLASH_MIN_MS = 1500;
-  const window = createWindow();
-  window.once('ready-to-show', () => {
-    const elapsed = Date.now() - splashShownAt;
-    const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
-    setTimeout(() => {
-      closeSplashWindow();
-      window.show();
-      window.focus();
-    }, remaining);
-  });
+  if (summary.hasRegisteredDevices) {
+    // 등록 장비 있음 → 바로 Main Window
+    setSplashStatus('Loading Main Screen...');
+    showMainWindow(splashShownAt);
+    return;
+  }
+
+  // 등록 장비 없음 → 스플래시를 닫고 Init Connect 팝업 표시
+  setSplashStatus('No registered devices. Opening device setup...');
+  const elapsed = Date.now() - splashShownAt;
+  const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+  setTimeout(() => {
+    closeSplashWindow();
+    createInitConnectWindow();
+  }, remaining);
 });
 
 app.on('second-instance', () => {

@@ -1,0 +1,158 @@
+/* Init Connect 팝업 스타일 (tkinter init_connect_window.py 재현) */
+
+.init-connect {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  padding: 36px;
+  background: #121212;
+  color: #f2f2f2;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.init-connect__header {
+  flex: 0 0 auto;
+}
+
+.init-connect__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.init-connect__subtitle {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: #c7c7c7;
+}
+
+.init-connect__body {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 24px;
+  margin-top: 28px;
+  min-height: 0;
+}
+
+.init-connect__types {
+  flex: 0 0 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.init-connect__type {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 10px 16px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  color: #2f2f2f;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.init-connect__type:not(.is-disabled) {
+  color: #c7c7c7;
+}
+
+.init-connect__type.is-selected {
+  border-left-color: #e6231c;
+  color: #e0e0e0;
+}
+
+.init-connect__type.is-disabled {
+  cursor: not-allowed;
+  color: #555555;
+}
+
+.init-connect__type-badge {
+  font-size: 11px;
+  color: #666666;
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 1px 8px;
+}
+
+.init-connect__form {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.init-connect__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.init-connect__label {
+  font-size: 13px;
+  color: #c7c7c7;
+}
+
+.init-connect__select {
+  width: 100%;
+  padding: 8px 10px;
+  background: #1e1e1e;
+  color: #f2f2f2;
+  border: 1px solid #3f3f3f;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.init-connect__port-row {
+  display: flex;
+  gap: 8px;
+}
+
+.init-connect__port-row .init-connect__select {
+  flex: 1 1 auto;
+}
+
+.init-connect__status {
+  margin: 0;
+  font-size: 13px;
+  min-height: 18px;
+}
+
+.init-connect__footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.init-connect__button {
+  min-width: 120px;
+  padding: 9px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #3f3f3f;
+}
+
+.init-connect__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.init-connect__button--ghost {
+  background: #1e1e1e;
+  color: #f2f2f2;
+}
+
+.init-connect__button--primary {
+  background: #e6231c;
+  border-color: #e6231c;
+  color: #ffffff;
+}

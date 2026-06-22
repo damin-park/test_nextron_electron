@@ -49,3 +49,17 @@ export async function requestAppShutdown(): Promise<void> {
   }
   return window.nextron.requestAppShutdown();
 }
+
+export async function completeInitConnect(): Promise<void> {
+  if (!hasBridge()) {
+    return;
+  }
+  return window.nextron.completeInitConnect();
+}
+
+export async function cancelInitConnect(): Promise<void> {
+  if (!hasBridge()) {
+    return;
+  }
+  return window.nextron.cancelInitConnect();
+}

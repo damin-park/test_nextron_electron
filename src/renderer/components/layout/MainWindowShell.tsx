@@ -11,13 +11,6 @@
  */
 import type { ReactElement } from 'react';
 import { APP_VERSION } from '../../../shared/app-version';
-import type {
-  BackendConnectionInfo,
-  BackendHealthStatus,
-  BackendRuntimeStatus,
-} from '../../../shared/backend';
-import type { BannerKind } from '../status/ConnectionBanner';
-import { ConnectionBanner } from '../status/ConnectionBanner';
 import { Dashboard } from '../../features/dashboard/Dashboard';
 import { ControlPanel } from '../../features/control-panel/ControlPanel';
 import { GraphPanel } from '../../features/graph/GraphPanel';
@@ -29,11 +22,6 @@ import { useSplitter } from './useSplitter';
 export interface MainWindowShellProps {
   currentMode: ControlMode;
   ivEnabled: boolean;
-  bannerKind?: BannerKind;
-  bannerMessage?: string;
-  backendStatus?: BackendRuntimeStatus;
-  backendConnection?: BackendConnectionInfo | null;
-  backendHealth?: BackendHealthStatus | null;
   onModeSelected: (mode: ControlMode) => void;
   onResults: () => void;
   onSettings: () => void;
@@ -42,11 +30,6 @@ export interface MainWindowShellProps {
 export function MainWindowShell({
   currentMode,
   ivEnabled,
-  bannerKind = 'idle',
-  bannerMessage = '',
-  backendStatus = 'unknown',
-  backendConnection = null,
-  backendHealth = null,
   onModeSelected,
   onResults,
   onSettings,
@@ -66,12 +49,7 @@ export function MainWindowShell({
           onSettings={onSettings}
         />
         <div className="main-content">
-          <ConnectionBanner kind={bannerKind} message={bannerMessage} />
-          <Dashboard
-            backendStatus={backendStatus}
-            connection={backendConnection}
-            health={backendHealth}
-          />
+          <Dashboard />
           <div className="work-area" ref={workAreaRef}>
             <ControlPanel mode={currentMode} ref={controlPanelRef} />
             <div

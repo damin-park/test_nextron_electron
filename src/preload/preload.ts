@@ -21,6 +21,11 @@ contextBridge.exposeInMainWorld('nextron', {
     ipcRenderer.invoke('backend:get-status'),
   requestAppShutdown: (): Promise<void> =>
     ipcRenderer.invoke('app:request-shutdown'),
+  // Init Connect 윈도우 lifecycle (REST 호출은 renderer service 계층에서 baseUrl 로 수행).
+  completeInitConnect: (): Promise<void> =>
+    ipcRenderer.invoke('init-connect:complete'),
+  cancelInitConnect: (): Promise<void> =>
+    ipcRenderer.invoke('init-connect:cancel'),
   onSystemEvent: (callback: (event: SystemEvent) => void): (() => void) => {
     const listener = (_event: unknown, payload: SystemEvent) => {
       callback(payload);

@@ -227,6 +227,8 @@ export const startPythonBackend = async () => {
       env: {
         ...process.env,
         PYTHONUNBUFFERED: '1',
+        // Backend 가 등록 장비 설정 파일을 저장할 위치(개발 PC 경로 하드코딩 방지).
+        NEXTRON_DATA_DIR: process.env.NEXTRON_DATA_DIR || app.getPath('userData'),
       },
       windowsHide: true,
     },
@@ -291,3 +293,50 @@ export const checkBackendHealth = () => {
   const { url } = getBackendInfo();
   return checkHealthAt(url);
 };
+
+const httpGetJson = <T>(url: string): Promise<T | undefined> =>
+  new Promise((resolve) => {
+    const request = http.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        response.resume();
+        resolve(undefined);
+        return;
+      }
+
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.on('end', () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8')) as T);
+        } catch {
+          resolve(undefined);
+        }
+      });
+    });
+
+    request.on('error', () => resolve(undefined));
+    request.setTimeout(2000, () => {
+      request.destroy();
+      resolve(undefined);
+    });
+  });
+
+interface RegisteredDevicesSummary {
+  hasRegisteredDevices: boolean;
+  count: number;
+  devices: Array<{ id: string; type: string; displayName: string; enabled: boolean }>;
+}
+
+/**
+ * 등록된 장비 요약을 backend 에서 조회한다(시작 흐름 분기용).
+ * 실패 시 안전하게 "등록 장비 없음"으로 간주한다.
+ */
+export const getRegisteredDevicesSummary =
+  async (): Promise<RegisteredDevicesSummary> => {
+    const { url } = getBackendInfo();
+    const summary = await httpGetJson<RegisteredDevicesSummary>(
+      `${url}/api/v1/devices/registered/summary`,
+    );
+
+    return summary ?? { hasRegisteredDevices: false, count: 0, devices: [] };
+  };
