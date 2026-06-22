@@ -54,7 +54,7 @@ npm.cmd run backend:install
 Electron 시작 시 `src/main/python-backend.ts`가 Conda 환경 `nextron-electron-backend`에서 FastAPI 서버를 실행합니다.
 
 ```powershell
-conda run --no-capture-output -n nextron-electron-backend python -m uvicorn app.main:app --host 127.0.0.1 --port 8765
+conda run --no-capture-output -n nextron-electron-backend python -m uvicorn backend.backend_main:app --host 127.0.0.1 --port 8765
 ```
 
 기본 포트 `8765`가 이미 사용 중이고 `/health`가 응답하면 기존 백엔드를 재사용합니다. 포트가 사용 중이지만 백엔드가 아니면 `8766`부터 빈 포트를 찾아 실행합니다.

@@ -2,7 +2,6 @@ import { app } from 'electron';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
-import path from 'node:path';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8765;
@@ -35,10 +34,10 @@ const getBackendUrl = (host: string, port: number) => `http://${host}:${port}`;
 
 const getBackendDirectory = () => {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'backend');
+    return process.resourcesPath;
   }
 
-  return path.join(app.getAppPath(), 'backend');
+  return app.getAppPath();
 };
 
 const getPythonCommand = (): { command: string; args: string[] } => {
@@ -159,7 +158,7 @@ export const startPythonBackend = async () => {
       ...args,
       '-m',
       'uvicorn',
-      'app.main:app',
+      'backend.backend_main:app',
       '--host',
       host,
       '--port',

@@ -15,8 +15,8 @@
     "backend:create": "conda create -y -n nextron-electron-backend python=3.12",
     "backend:update-python": "conda install -y -n nextron-electron-backend python=3.12",
     "backend:install": "conda run -n nextron-electron-backend python -m pip install -r backend\\requirements.txt",
-    "backend:check": "conda run -n nextron-electron-backend python -m py_compile backend\\app\\main.py",
-    "backend:dev": "conda run --no-capture-output -n nextron-electron-backend python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload --app-dir backend"
+    "backend:check": "conda run -n nextron-electron-backend python -m py_compile backend\\backend_main.py",
+    "backend:dev": "conda run --no-capture-output -n nextron-electron-backend python -m uvicorn backend.backend_main:app --host 127.0.0.1 --port 8765 --reload"
   },
   "keywords": [],
   "author": {

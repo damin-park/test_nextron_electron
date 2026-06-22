@@ -1,12 +1,12 @@
 # Architecture
 
-이 프로젝트는 Electron 앱과 Python FastAPI 백엔드를 같은 데스크톱 앱 안에서 함께 다룹니다. Electron 코드가 익숙하지 않은 개발자를 위해 `src/` 아래를 Electron의 역할 단위로 나눕니다.
+이 프로젝트는 Electron 앱과 Python FastAPI backend를 함께 실행합니다. 기존 `Nextron_tkinter` 프로젝트를 migration 하기 쉽도록 Python backend는 기존 backend 계층을 따라갑니다.
 
 ## 최상위 구조
 
 ```text
 Nextron_Electron/
-  backend/               Python FastAPI 백엔드
+  backend/               Python FastAPI backend
   docs/                  개발자 문서
   src/                   Electron 앱 코드
     main/                Electron main process
@@ -19,15 +19,15 @@ Nextron_Electron/
   index.html             renderer HTML 진입점
 ```
 
-루트에 남아 있는 `forge.config.ts`, `vite.*.config.ts`, `index.html`은 도구 설정과 진입점입니다. 일반적인 기능 개발은 대부분 `src/` 또는 `backend/` 안에서 이루어집니다.
+일반적인 기능 개발은 대부분 `src/` 또는 `backend/` 안에서 이루어집니다. 루트의 Forge/Vite 설정 파일은 빌드 도구 설정입니다.
 
-## Electron 코드 구조
+## Electron 구조
 
 ```text
 src/
   main/
     main.ts              Electron 앱 시작점
-    python-backend.ts    Python 백엔드 프로세스 실행/종료 관리
+    python-backend.ts    Python backend 프로세스 실행/종료 관리
   preload/
     preload.ts           renderer에 안전한 API 노출
     preload.d.ts         window.backend 타입 선언
@@ -35,6 +35,19 @@ src/
     renderer.ts          UI 진입점
     index.css            UI 스타일
 ```
+
+## Python Backend 구조
+
+```text
+backend/
+  backend_main.py        FastAPI 앱 생성과 router 등록
+  controllers/           장비별 controller adapter
+  handlers/              요청 처리 handler
+  managers/              backend 상태와 controller 관리
+  router/                FastAPI router 및 command routing
+```
+
+이 구조는 기존 `Nextron_tkinter/src/backend`의 `controllers`, `handlers`, `managers`, `router`, `backend_main.py`를 기준으로 맞춘 것입니다.
 
 ## 프로세스 역할
 
@@ -51,7 +64,7 @@ Electron preload
 
 Electron renderer
   - 사용자 화면 표시
-  - window.backend API로 백엔드 상태 조회
+  - window.backend API로 backend 상태 조회
 
 Python backend
   - FastAPI 앱
@@ -60,14 +73,18 @@ Python backend
 
 ## 파일 책임
 
-- `src/main/main.ts`: Electron 앱 생명주기, 창 생성, IPC 등록, 백엔드 시작 호출
+- `src/main/main.ts`: Electron 앱 생명주기, 창 생성, IPC 등록, backend 시작 호출
 - `src/main/python-backend.ts`: Conda 환경에서 Python 서버 실행, 포트 충돌 처리, 앱 종료 시 프로세스 종료
 - `src/preload/preload.ts`: renderer에 허용할 API만 노출
 - `src/preload/preload.d.ts`: renderer에서 `window.backend`를 타입 안전하게 사용하기 위한 선언
 - `src/renderer/renderer.ts`: 현재 화면 진입점. React 도입 시 React mount 코드가 들어갈 위치
-- `backend/app/main.py`: FastAPI 앱 진입점
+- `backend/backend_main.py`: FastAPI 앱 진입점
+- `backend/router/*`: HTTP API router
+- `backend/handlers/*`: 요청 처리 handler
+- `backend/managers/*`: backend 상태와 controller 관리
+- `backend/controllers/*`: 장비별 controller adapter
 
-## 백엔드 실행 정책
+## Backend 실행 정책
 
 기본 Conda 환경은 `nextron-electron-backend`입니다. Python 실행 방식은 아래 순서로 결정됩니다.
 
@@ -75,11 +92,17 @@ Python backend
 2. 없으면 `NEXTRON_CONDA_EXE` 또는 `conda` 명령을 사용합니다.
 3. Conda 환경명은 `NEXTRON_CONDA_ENV` 또는 기본값 `nextron-electron-backend`입니다.
 
+Electron은 프로젝트 루트에서 아래와 같은 방식으로 backend를 실행합니다.
+
+```powershell
+conda run --no-capture-output -n nextron-electron-backend python -m uvicorn backend.backend_main:app --host 127.0.0.1 --port 8765
+```
+
 ## 포트 정책
 
 기본 주소는 `127.0.0.1:8765`입니다.
 
-- `8765/health`가 정상 응답하면 이미 떠 있는 백엔드로 보고 재사용합니다.
+- `8765/health`가 정상 응답하면 이미 떠 있는 backend로 보고 재사용합니다.
 - 포트가 점유되어 있지만 `/health`가 응답하지 않으면 `8765`부터 20개 범위에서 빈 포트를 찾습니다.
 - 실제 선택된 URL은 `window.backend.getInfo()`로 renderer에 전달됩니다.
 
@@ -90,5 +113,5 @@ Python backend
 현재 단계에서는 Python 인터프리터나 Conda 환경 자체를 앱에 번들링하지 않습니다. 배포 단계에서는 아래 중 하나를 선택해야 합니다.
 
 - 대상 PC에 Anaconda와 `nextron-electron-backend` 환경을 설치한다.
-- Python 백엔드를 PyInstaller 등으로 실행 파일화한 뒤 Electron에서 해당 exe를 실행한다.
+- Python backend를 PyInstaller 등으로 실행 파일화한 뒤 Electron에서 해당 exe를 실행한다.
 - 사내 설치 스크립트로 Conda 환경 생성과 앱 설치를 함께 처리한다.

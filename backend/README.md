@@ -1,6 +1,19 @@
 # Backend
 
-Python FastAPI 백엔드입니다. 장비 통신 코드(`pyserial`, `pyvisa`, `minimalmodbus`)는 앞으로 이 폴더 아래에 추가합니다.
+Python FastAPI backend입니다. 기존 `Nextron_tkinter/src/backend` migration을 쉽게 하기 위해 동일한 큰 계층을 유지합니다.
+
+## 구조
+
+```text
+backend/
+  backend_main.py        FastAPI 앱 생성과 라우터 등록
+  controllers/           장비별 controller adapter
+  handlers/              요청 처리 handler
+  managers/              상태, controller, telemetry 등 backend manager
+  router/                FastAPI router 및 command routing
+  requirements.txt       pip 의존성
+  environment.yml        Conda 환경 정의
+```
 
 ## 실행
 
@@ -8,35 +21,24 @@ Python FastAPI 백엔드입니다. 장비 통신 코드(`pyserial`, `pyvisa`, `m
 npm.cmd run backend:dev
 ```
 
-또는 직접 실행할 수 있습니다.
+직접 실행할 때는 프로젝트 루트에서 아래 명령을 사용합니다.
 
 ```powershell
-conda run --no-capture-output -n nextron-electron-backend python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload --app-dir backend
+conda run --no-capture-output -n nextron-electron-backend python -m uvicorn backend.backend_main:app --host 127.0.0.1 --port 8765 --reload
 ```
 
-## 엔드포인트
+## 현재 엔드포인트
 
-- `GET /health`: 백엔드 생존 확인
+- `GET /health`: backend 생존 확인
 
-## 의존성
+## Migration 기준
 
-- `requirements.txt`: pip 패키지 목록
-- `environment.yml`: Conda 환경 정의
+기존 tkinter backend의 파일은 아래 기준으로 옮깁니다.
 
-새 Python 패키지를 추가할 때는 우선 `requirements.txt`에 기록하고 아래 명령을 실행합니다.
+- `src/backend/backend_main.py` -> `backend/backend_main.py`
+- `src/backend/controllers/*` -> `backend/controllers/*`
+- `src/backend/handlers/*` -> `backend/handlers/*`
+- `src/backend/managers/*` -> `backend/managers/*`
+- `src/backend/router/*` -> `backend/router/*`
 
-```powershell
-npm.cmd run backend:install
-```
-
-## 권장 모듈 배치
-
-장비 통신 코드가 늘어나면 아래처럼 나눕니다.
-
-```text
-backend/app/main.py          FastAPI 앱 생성과 라우터 등록
-backend/app/api/             HTTP API 라우터
-backend/app/services/        장비 제어와 업무 로직
-backend/app/devices/         serial/visa/modbus 장비 어댑터
-backend/app/schemas/         요청/응답 Pydantic 모델
-```
+FastAPI API 라우터는 `backend/router`에 두고, 장비 제어와 업무 로직은 `controllers`, `handlers`, `managers`로 분리합니다.
