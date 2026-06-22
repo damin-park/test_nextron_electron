@@ -65,7 +65,9 @@ export function createSideMenu(
       item.classList.add('has-badge');
     }
     item.innerHTML = `
-      <span class="side-menu__icon">${renderIcon(config.icon)}</span>
+      <span class="side-menu__icon">
+        <span class="material-symbols-outlined side-menu__icon-glyph">${renderIcon(config.icon)}</span>
+      </span>
       <span class="side-menu__label">${config.label}</span>
       <span class="side-menu__badge"></span>
     `;

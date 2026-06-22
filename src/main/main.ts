@@ -25,14 +25,19 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1366,
     height: 768,
+    useContentSize: true,
     minWidth: 1366,
-    minHeight: 736,
+    minHeight: 768,
+    autoHideMenuBar: true,
     backgroundColor: '#121212',
     title: 'Nextron Integrated Program',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
+
+  // tkinter UI와 동일하게 앱 내부 메뉴바만 사용한다.
+  mainWindow.setMenuBarVisibility(false);
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
