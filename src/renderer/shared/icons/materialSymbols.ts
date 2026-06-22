@@ -1,5 +1,6 @@
 /**
  * tkinter `material_theme.py`와 동일하게 Material Symbols 폰트의 유니코드 글리프를 사용한다.
+ * SVG 가 아니라 Material Symbols 폰트 글리프 방식을 유지한다.
  */
 export type IconName =
   | 'description'
@@ -16,6 +17,6 @@ const ICON_GLYPHS: Record<IconName, string> = {
   settings: '\uE8B8',
 };
 
-export function renderIcon(name: IconName): string {
+export function getIconGlyph(name: IconName): string {
   return ICON_GLYPHS[name];
 }

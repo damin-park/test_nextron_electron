@@ -61,6 +61,7 @@ conda run --no-capture-output -n nextron-electron-backend python -m uvicorn back
 
 ## 추가 문서
 
+- [마이그레이션 현황](docs/migration-status.md)
 - [개발 가이드](docs/development.md)
 - [구조 설명](docs/architecture.md)
 - [백엔드 가이드](backend/README.md)

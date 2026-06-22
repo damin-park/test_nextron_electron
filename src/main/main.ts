@@ -3,7 +3,10 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import {
   checkBackendHealth,
+  getBackendConnection,
   getBackendInfo,
+  getBackendStatus,
+  setSystemEventListener,
   startPythonBackend,
   stopPythonBackend,
 } from './python-backend';
@@ -62,11 +65,23 @@ const createWindow = () => {
 
 ipcMain.handle('backend:get-info', () => getBackendInfo());
 ipcMain.handle('backend:health', () => checkBackendHealth());
+ipcMain.handle('backend:get-connection', () => getBackendConnection());
+ipcMain.handle('backend:get-status', () => getBackendStatus());
+ipcMain.handle('app:request-shutdown', () => {
+  app.quit();
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
+  // backend 상태 변경을 renderer 로 전달한다(아직 메인 윈도가 없으면 무시).
+  setSystemEventListener((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('system:event', event);
+    }
+  });
+
   // 1. 스플래시 먼저 표시
   const splashShownAt = Date.now();
   createSplashWindow();

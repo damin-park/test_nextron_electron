@@ -1,16 +1,20 @@
-export type BackendInfo = {
-  host: string;
-  port: number;
-  url: string;
-  pid?: number;
-  running: boolean;
-};
+import type {
+  BackendConnectionInfo,
+  BackendInfo,
+  BackendRuntimeStatus,
+  SystemEvent,
+} from '../shared/backend';
 
 declare global {
   interface Window {
-    backend: {
-      getInfo: () => Promise<BackendInfo>;
-      health: () => Promise<boolean>;
+    nextron: {
+      getBackendInfo: () => Promise<BackendInfo>;
+      getBackendConnection: () => Promise<BackendConnectionInfo>;
+      getBackendStatus: () => Promise<BackendRuntimeStatus>;
+      requestAppShutdown: () => Promise<void>;
+      onSystemEvent: (callback: (event: SystemEvent) => void) => () => void;
     };
   }
 }
+
+export {};

@@ -1,6 +1,33 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type {
+  BackendConnectionInfo,
+  BackendInfo,
+  BackendRuntimeStatus,
+  SystemEvent,
+} from '../shared/backend';
 
-contextBridge.exposeInMainWorld('backend', {
-  getInfo: () => ipcRenderer.invoke('backend:get-info'),
-  health: () => ipcRenderer.invoke('backend:health'),
+const SYSTEM_EVENT_CHANNEL = 'system:event';
+
+/**
+ * Renderer 에 노출하는 전용 API.
+ * 범용 invoke/send 는 노출하지 않고, 의미 있는 backend 연결 API 만 제공한다.
+ */
+contextBridge.exposeInMainWorld('nextron', {
+  getBackendInfo: (): Promise<BackendInfo> =>
+    ipcRenderer.invoke('backend:get-info'),
+  getBackendConnection: (): Promise<BackendConnectionInfo> =>
+    ipcRenderer.invoke('backend:get-connection'),
+  getBackendStatus: (): Promise<BackendRuntimeStatus> =>
+    ipcRenderer.invoke('backend:get-status'),
+  requestAppShutdown: (): Promise<void> =>
+    ipcRenderer.invoke('app:request-shutdown'),
+  onSystemEvent: (callback: (event: SystemEvent) => void): (() => void) => {
+    const listener = (_event: unknown, payload: SystemEvent) => {
+      callback(payload);
+    };
+    ipcRenderer.on(SYSTEM_EVENT_CHANNEL, listener);
+    return () => {
+      ipcRenderer.removeListener(SYSTEM_EVENT_CHANNEL, listener);
+    };
+  },
 });
