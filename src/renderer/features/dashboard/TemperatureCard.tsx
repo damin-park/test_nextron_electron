@@ -46,7 +46,10 @@ export function TemperatureCard(): ReactElement {
 
   const connected = state?.connected === true;
   const unit = state?.unit ?? '°C';
-  const pv = formatValue(state?.currentTemperature);
+  const sv = formatValue(state?.sv ?? state?.targetSetpoint);
+  const pv = formatValue(state?.pv ?? state?.currentTemperature);
+  const hotPower = formatValue(state?.hotPower);
+  const coolPower = formatValue(state?.coolPower);
   const iconColor = connIconColor(state?.connected, actionState);
   const isBusy = actionState !== 'idle';
 
@@ -106,7 +109,7 @@ export function TemperatureCard(): ReactElement {
         <div className="temp-card__left">
           <div className="temp-card__row">
             <span className="temp-card__label">SV</span>
-            <span className="temp-card__value temp-card__value--sv">--</span>
+            <span className="temp-card__value temp-card__value--sv">{sv}</span>
             <span className="temp-card__unit">{unit}</span>
           </div>
           <div className="temp-card__row">
@@ -121,12 +124,12 @@ export function TemperatureCard(): ReactElement {
           <div className="temp-card__right">
             <div className="temp-card__row temp-card__row--right">
               <span className="temp-card__label-wide">Hot Power</span>
-              <span className="temp-card__value-sm">--</span>
+              <span className="temp-card__value-sm">{hotPower}</span>
               <span className="temp-card__unit">%</span>
             </div>
             <div className="temp-card__row temp-card__row--right">
               <span className="temp-card__label-wide">Cool Power</span>
-              <span className="temp-card__value-sm">--</span>
+              <span className="temp-card__value-sm">{coolPower}</span>
               <span className="temp-card__unit">%</span>
             </div>
           </div>

@@ -121,10 +121,14 @@
 
 - `src/renderer/assets/fonts/material-symbols-outlined.ttf`
 - `src/renderer/assets/fonts/material-symbols-filled.ttf`
-- `src/renderer/ui/icons.ts`
-- `src/renderer/ui/sideMenu.ts`
+- `src/renderer/shared/icons/materialSymbols.ts`
+- `src/renderer/components/layout/SideMenu.tsx`
 - `src/renderer/styles/theme.css`
 - `src/renderer/styles/components.css`
+
+> 주의(중요): icon 표시는 CSS ligature 가 아니라 **Unicode glyph codepoint** 방식이다(`getIconGlyph`).
+> 또한 `.material-symbols-outlined` 단독 클래스에 base `font-family` 규칙이 반드시 있어야 한다.
+> 이 규칙이 없으면 SideMenu 외의 아이콘(카드/설정 등)이 tofu(□)로 깨진다. (theme.css 에 base 규칙 존재)
 
 현재 사이드 메뉴 항목:
 
@@ -177,7 +181,7 @@
 
 - `src/shared/app-version.ts`
 - `src/main/splash-window.ts`
-- `src/renderer/ui/mainWindow.ts`
+- `src/renderer/components/layout/MenuBar.tsx`
 
 현재 버전 값:
 
@@ -186,6 +190,78 @@ export const APP_VERSION = 'v1.0.0';
 ```
 
 버전 변경 시 `src/shared/app-version.ts`만 수정하면 된다.
+
+### 7. Temperature 연결 기능 (Dashboard 카드 + Settings 팝업)
+
+원본 tkinter의 온도 컨트롤러 연결 흐름을 Electron으로 재현했다. backend(FastAPI)와 실제로 통신하는 첫 번째 기능 영역이다.
+
+구현된 동작:
+
+- 대시보드의 Temperature 카드에서 현재 연결 상태(연결됨/연결중/미연결/에러)를 색상 dot + 텍스트로 표시한다.
+- 카드의 link 아이콘 클릭 = **연결/해제 토글** (원본 `base_panel.py _on_connection_click`의 등록된 장치 동작). Settings를 여는 것이 아니다.
+- 카드의 PV(현재 온도)는 backend `/state`의 `currentTemperature`를 2초 polling으로 표시한다.
+- Settings는 **별도 팝업 BrowserWindow**(720×600, modal)로 열린다. 원본 `settings.py`의 `tk.Toplevel` 구조를 재현한 것이며, 인라인 패널이 아니다.
+- Settings 팝업 좌측 메뉴: Interval Setting / Connection(기본 선택) / Temperature·MFC·Humidity·Pressure Controller(연결 전 비활성).
+- Connection 패널: Serial Port 선택 + Refresh, Model 선택, Baudrate(9600), Timeout(5.0), Find Device / Connect / Disconnect 버튼.
+
+관련 파일:
+
+- `src/renderer/features/dashboard/Dashboard.tsx`
+- `src/renderer/features/dashboard/TemperatureCard.tsx`
+- `src/renderer/features/settings/SettingsApp.tsx` (Settings 팝업 루트)
+- `src/renderer/features/settings/ConnectionSettings.tsx`
+- `src/renderer/hooks/useTemperatureConnection.ts` (2초 polling, connect/disconnect/probe)
+- `src/renderer/services/temperatureClient.ts`
+- `src/renderer/services/resourceClient.ts`
+- `src/renderer/services/backendConnection.ts` (openSettings/closeSettings 브릿지)
+- `src/main/settings-window.ts` (Settings 팝업 BrowserWindow, hash `#/settings`)
+- `src/main/main.ts` (IPC `settings:open` / `settings:close`)
+- `src/preload/preload.ts`, `src/preload/preload.d.ts`
+- `src/renderer/main.tsx` (hash 라우팅: App / InitConnectApp / SettingsApp)
+
+Backend API 참고:
+
+- API base: `/api/devices/temperature/{device_id}/...` (버전 prefix 없음). 기본 device id는 `temperature-1`.
+- 시리얼 포트 목록: `GET /api/resources/serial` → **bare 배열** `[{ "port": "COM8", "description": "..." }]` 반환 (객체 래핑 아님).
+- `/state` 응답에는 PV(currentTemperature)만 있고 SV(목표값)·Hot Power·Cool Power는 아직 없다 → 카드에서 `--`로 표시. (backend API gap)
+
+### 8. 버그 3종 수정 + ErrorBoundary
+
+Temperature 연결 UI 작업 중 발견·수정한 3가지 이슈와 진단용 ErrorBoundary 추가.
+
+- **아이콘 깨짐(tofu)**: `.material-symbols-outlined` 단독 클래스에 base `font-family` 규칙이 없어 SideMenu 외 아이콘이 기본 폰트로 렌더됐다. theme.css에 base 규칙을 추가해 해결.
+- **링크 클릭 시 크래시** (`Cannot read properties of undefined (reading '0')`): `/api/resources/serial`이 bare 배열을 반환하는데 `resourceClient`가 존재하지 않는 `result.resources`를 읽어 `[0]` 접근에서 throw. `Array.isArray()` 가드로 해결. (브라우저에서는 backend 미연결로 일찍 catch되어 재현되지 않고, Electron에서만 발생하던 버그)
+- **Settings 구조 오류**: 원본은 별도 팝업 창인데 인라인 패널로 잘못 구현했던 것을 팝업 BrowserWindow로 정정.
+- **ErrorBoundary**: 렌더 에러 시 블랭크 화면 대신 메시지를 표시하도록 추가. `main.tsx`에서 전체 root를 감싼다.
+
+관련 파일:
+
+- `src/renderer/components/ErrorBoundary.tsx`
+- `src/renderer/styles/theme.css`
+- `src/renderer/services/resourceClient.ts`
+
+### 9. Side Menu 모듈화 (preset 패턴)
+
+원본 tkinter `side_menu/preset.py`의 `register_default_items()` 구조를 React로 이식해, 커스텀 소프트웨어 빌드에서 메뉴 항목을 추가/제거하기 쉽게 모듈화했다.
+
+설계:
+
+- 메뉴 항목 정의를 컴포넌트에서 분리해 **별도 preset 파일**(`sideMenuPreset.ts`)의 `createDefaultSideMenuItems()` 빌더로 생성한다 (원본 `register_default_items` 대응).
+- 각 항목(`SideMenuItemConfig`)이 **자체 `onClick` 콜백**을 들고 있어, 항목을 추가/제거해도 `SideMenu.tsx`의 디스패치 로직을 수정할 필요가 없다.
+- `disabled`/`hidden`은 항목 config에서 읽는다 (원본 `set_item_enabled`/`set_item_visible` 대응). App 상태(예: `ivEnabled`)로 빌더 호출 시점에 결정한다.
+- `SideMenu.tsx`는 `items` prop을 받아 렌더링만 하는 순수 컴포넌트가 됐다.
+- 조합 루트는 `App.tsx`(원본 `main_window.py` 역할)로, 여기서 preset을 빌드해 주입한다.
+
+커스텀 빌드 방법: `createDefaultSideMenuItems` 대신 별도 빌더(예: `createCustomSideMenuItems`)를 만들어 `App.tsx`에서 교체 호출하면, 컴포넌트 수정 없이 완전히 다른 메뉴 구성이 가능하다.
+
+관련 파일:
+
+- `src/renderer/components/layout/sideMenuPreset.ts` (신규: 항목 타입 + 기본 빌더)
+- `src/renderer/components/layout/SideMenu.tsx` (items 주입 받는 순수 렌더러로 전환)
+- `src/renderer/components/layout/MainWindowShell.tsx` (sideMenuItems prop 전달)
+- `src/renderer/app/App.tsx` (preset 빌드 + 주입)
+
+> 미구현으로 남긴 부분: 원본의 런타임 명령형 API(`add_item`/`remove_item`/`set_item_callback`). React에서는 props 재렌더로 대체되므로 필요 시 추가한다.
 
 ## Current Runtime Flow
 
@@ -232,7 +308,7 @@ npm start
 - Manual control 상세 위젯
 - IV control 상세 위젯
 - Results 화면
-- Settings 화면
+- Settings 화면의 Connection 외 메뉴 (Interval Setting / MFC·Humidity·Pressure Controller). Settings 팝업 골격과 Temperature Connection 패널은 구현됨(섹션 7 참고).
 
 ### Dashboard Data Binding
 
@@ -240,8 +316,9 @@ npm start
 
 남은 작업:
 
-- 실제 backend 상태 연결
-- 온도/습도/MFC/압력/SMU 값 표시
+- 실제 backend 상태 연결 (Temperature PV/연결상태는 연결됨 — 섹션 7 참고)
+- 습도/MFC/압력/SMU 값 표시 (현재 placeholder)
+- Temperature SV·Hot Power·Cool Power 표시 (backend `/state` API에 해당 필드 추가 필요)
 - 연결 상태에 따른 badge/state 업데이트
 
 ### Graph Panel
@@ -305,3 +382,8 @@ Python backend 실행/health check 기반은 준비되어 있으나, renderer UI
 - Main window는 content size 기준 `1366 x 768`을 기본으로 한다.
 - Splash screen은 main process BrowserWindow에서 data URL로 로드된다.
 - `APP_VERSION`은 `src/shared/app-version.ts`에서만 관리한다.
+- **Settings는 별도 팝업 BrowserWindow(720×600)** 이다. 인라인 패널로 바꾸지 말 것. 원본 `settings.py` Toplevel 구조를 따른다.
+- **사이드 메뉴 항목은 `sideMenuPreset.ts`의 빌더에서 정의**한다. 항목 추가/제거는 preset 파일에서 하고 `SideMenu.tsx`는 건드리지 않는다.
+- Material Symbols 아이콘은 `.material-symbols-outlined` base `font-family` CSS 규칙(theme.css)에 의존한다. 이 규칙을 지우면 아이콘이 tofu로 깨진다.
+- `GET /api/resources/serial`은 객체가 아니라 **bare 배열**을 반환한다. 클라이언트에서 `Array.isArray()`로 방어한다.
+- 대시보드/Electron 동작은 브라우저(localhost:5173) 단독 실행 시 backend 미연결 상태로 보인다. 실제 검증은 `npm start`(Electron)에서 한다.

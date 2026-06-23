@@ -117,20 +117,24 @@ class TemperatureService:
         future = self._actor.submit(command)
         return await self._await(future, command.command_id, device_id, command.timeout_sec)
 
-    # ── read current ──────────────────────────────────────────────────────────
+    # ── read status (dashboard snapshot: sv/pv/hotPower/coolPower) ─────────────
 
-    async def read_current(self, device_id: str) -> CommandResult:
+    async def read_status(self, device_id: str) -> CommandResult:
         command = DeviceCommand(
             device_id=device_id,
             device_type="temperature",
             queue_type=CommandQueueType.POLLING,
-            action="read_current",
+            action="read_status",
             payload={},
             response_mode=ResponseMode.WAIT,
             context={"origin": "gui"},
         )
         future = self._actor.submit(command)
         return await self._await(future, command.command_id, device_id, command.timeout_sec)
+
+    async def read_current(self, device_id: str) -> CommandResult:
+        """Deprecated: read_status 로 위임. 신규 코드는 read_status 사용."""
+        return await self.read_status(device_id=device_id)
 
     # ── write setpoint (mock 유지, 다음 단계에서 Actor 연동) ─────────────────
 

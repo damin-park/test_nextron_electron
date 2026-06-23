@@ -103,7 +103,14 @@ export interface TemperatureDeviceState {
   model?: string;
   connected?: boolean;
   polling?: boolean;
+  /** Dashboard primary 필드 (FB100 PV=M1 / SV=MS / Hot=O1% / Cool=O2%) */
+  sv?: number | null;
+  pv?: number | null;
+  hotPower?: number | null;
+  coolPower?: number | null;
+  /** 구코드 호환 alias */
   currentTemperature?: number | null;
+  targetSetpoint?: number | null;
   unit?: string | null;
   lastUpdated?: string | null;
   lastCommandId?: string | null;
@@ -116,4 +123,18 @@ export interface TemperatureDeviceConnectRequest {
   baudrate?: number;
   timeoutSec?: number;
   model?: string;
+}
+
+/**
+ * Telemetry WebSocket 메시지 (Backend → Frontend push).
+ * Backend TelemetryBroadcaster 가 StateManager snapshot 을 device.telemetry
+ * 형식으로 보낸다.
+ */
+export interface DeviceTelemetryMessage {
+  type: 'device.telemetry';
+  timestamp: string;
+  devices: {
+    temperature?: Record<string, TemperatureDeviceState>;
+    [deviceType: string]: Record<string, unknown> | undefined;
+  };
 }

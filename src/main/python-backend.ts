@@ -229,6 +229,8 @@ export const startPythonBackend = async () => {
         PYTHONUNBUFFERED: '1',
         // Backend 가 등록 장비 설정 파일을 저장할 위치(개발 PC 경로 하드코딩 방지).
         NEXTRON_DATA_DIR: process.env.NEXTRON_DATA_DIR || app.getPath('userData'),
+        // Electron main PID — backend watchdog 이 이 프로세스 종료 시 스스로 종료한다.
+        NEXTRON_PARENT_PID: String(process.pid),
       },
       windowsHide: true,
     },

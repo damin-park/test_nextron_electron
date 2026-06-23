@@ -1,8 +1,11 @@
 /**
  * Settings > Connection 패널 (connection_setting.py 재현).
  *
- * Temperature 장비의 연결 설정(포트/보레이트/모델/타임아웃)을 제공하고
- * 연결 / 연결 해제 / 탐색 버튼을 통해 장비를 제어한다.
+ * Temperature 장비의 연결 설정(포트/모델)을 제공하고
+ * Refresh / Connect / Disconnect / Find Device 버튼을 통해 장비를 제어한다.
+ *
+ * 기존 Tkinter Settings>Connection과 동일하게 baudrate/timeout은 사용자에게
+ * 노출하지 않고 내부 고정값을 사용한다.
  *
  * SettingsApp(팝업 창) 내부의 detail 영역에 표시되는 패널 콘텐츠다.
  */
@@ -19,8 +22,9 @@ import {
 
 const DEFAULT_DEVICE_ID = 'temperature-1';
 const TEMPERATURE_MODELS = ['PT', 'PTH', 'CHL', 'CHH', 'CHU', 'LN'];
-const DEFAULT_BAUDRATE = 9600;
-const DEFAULT_TIMEOUT_SEC = 5.0;
+// 내부 고정값 (Tkinter와 동일하게 UI 미노출)
+const FIXED_BAUDRATE = 9600;
+const FIXED_TIMEOUT_SEC = 5.0;
 
 /** 연결 상태 텍스트 및 색상 */
 function statusDisplay(
@@ -42,8 +46,6 @@ export function ConnectionSettings(): ReactElement {
   const [ports, setPorts] = useState<SerialResource[]>([]);
   const [port, setPort] = useState<string>('');
   const [model, setModel] = useState<string>(TEMPERATURE_MODELS[0]);
-  const [baudrate, setBaudrate] = useState<number>(DEFAULT_BAUDRATE);
-  const [timeoutSec, setTimeoutSec] = useState<number>(DEFAULT_TIMEOUT_SEC);
   const [portsLoading, setPortsLoading] = useState(false);
 
   const refreshPorts = useCallback(async () => {
@@ -69,12 +71,12 @@ export function ConnectionSettings(): ReactElement {
   const handleConnect = useCallback(async () => {
     const request: TemperatureDeviceConnectRequest = {
       ...(port ? { port } : {}),
-      baudrate,
-      timeoutSec,
+      baudrate: FIXED_BAUDRATE,
+      timeoutSec: FIXED_TIMEOUT_SEC,
       model,
     };
     await connect(request);
-  }, [connect, port, baudrate, timeoutSec, model]);
+  }, [connect, port, model]);
 
   const isBusy = actionState !== 'idle';
   const connected = state?.connected;
@@ -164,41 +166,6 @@ export function ConnectionSettings(): ReactElement {
                   </option>
                 ))}
               </select>
-            </div>
-
-            {/* 보레이트 */}
-            <div className="conn-settings__field">
-              <label className="conn-settings__label" htmlFor="cs-baud">
-                Baudrate
-              </label>
-              <input
-                id="cs-baud"
-                type="number"
-                className="conn-settings__input"
-                value={baudrate}
-                onChange={(e) => setBaudrate(Number(e.target.value))}
-                disabled={isBusy}
-                min={1200}
-                max={115200}
-              />
-            </div>
-
-            {/* 타임아웃 */}
-            <div className="conn-settings__field">
-              <label className="conn-settings__label" htmlFor="cs-timeout">
-                Timeout (sec)
-              </label>
-              <input
-                id="cs-timeout"
-                type="number"
-                className="conn-settings__input"
-                value={timeoutSec}
-                onChange={(e) => setTimeoutSec(Number(e.target.value))}
-                disabled={isBusy}
-                min={1}
-                max={30}
-                step={0.5}
-              />
             </div>
           </div>
 

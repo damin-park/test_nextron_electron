@@ -59,8 +59,14 @@ class IFb100Adapter(ABC):
         """장비 연결 해제."""
 
     @abstractmethod
-    def read_current(self) -> dict[str, Any]:
-        """현재 온도 읽기. 반환: {"currentTemperature": float, "unit": "C"}"""
+    def read_dashboard_values(self) -> dict[str, Any]:
+        """Dashboard 표시용 상태 snapshot 읽기.
+
+        반환: {"sv": float, "pv": float, "hotPower": float, "coolPower": float,
+               "unit": "C"}  (FB100 PV=M1 / SV=MS / Hot=O1% / Cool=O2%)
+        명칭 주의: temperature 문맥의 'current'는 전류가 아니라 현재값(PV)을 뜻한다.
+        전류 오해를 피하기 위해 read_current 대신 read_dashboard_values 명칭을 쓴다.
+        """
 
     @abstractmethod
     def is_connected(self) -> bool:
@@ -75,7 +81,10 @@ class MockFb100Adapter(IFb100Adapter):
     def __init__(self) -> None:
         self._connected = False
         self._model: Optional[str] = None
-        self._temperature = 25.3
+        self._pv = 25.3
+        self._sv = 30.0
+        self._hot_power = 12.5
+        self._cool_power = 0.0
 
     def probe(self, port: str = "", **kwargs: Any) -> bool:
         return True
@@ -97,11 +106,22 @@ class MockFb100Adapter(IFb100Adapter):
         logger.info("[MockFb100] disconnected")
         return True
 
-    def read_current(self) -> dict[str, Any]:
+    def read_dashboard_values(self) -> dict[str, Any]:
         if not self._connected:
             raise RuntimeError("Not connected")
-        self._temperature += 0.01  # 미세 변화로 폴링 갱신 확인
-        return {"currentTemperature": round(self._temperature, 2), "unit": "C"}
+        # PV 미세 변화로 폴링 갱신 확인 (mock 전용)
+        self._pv += 0.01
+        pv = round(self._pv, 2)
+        return {
+            "sv": self._sv,
+            "pv": pv,
+            "hotPower": self._hot_power,
+            "coolPower": self._cool_power,
+            "unit": "C",
+            # 구코드 호환 alias
+            "currentTemperature": pv,
+            "targetSetpoint": self._sv,
+        }
 
     def is_connected(self) -> bool:
         return self._connected
@@ -112,8 +132,8 @@ class MockFb100Adapter(IFb100Adapter):
 class RealFb100Adapter(IFb100Adapter):
     """기존 FB100TemperatureController를 래핑한 실제 adapter.
 
-    TODO: FB100TemperatureController.read()가 현재 실제 PV/SV를 반환하지 않음.
-          실제 Modbus/serial read 구현 후 read_current()를 업데이트할 것.
+    Real mode에서는 실제 FB100 read만 사용한다. read 실패 시 예외를 그대로
+    전파하며, mock 값으로 조용히 fallback하지 않는다.
     """
 
     def __init__(self) -> None:
@@ -122,7 +142,6 @@ class RealFb100Adapter(IFb100Adapter):
 
         self._ctrl = FB100TemperatureController()
         self._ConnectionConfig = ConnectionConfig
-        self._mock_temp = 25.3  # TODO: 실제 PV read 구현 전 임시 값
 
     def probe(self, port: str = "", **kwargs: Any) -> bool:
         if not port:
@@ -156,12 +175,11 @@ class RealFb100Adapter(IFb100Adapter):
         logger.info("[RealFb100] disconnect ok=%s", ok)
         return ok
 
-    def read_current(self) -> dict[str, Any]:
+    def read_dashboard_values(self) -> dict[str, Any]:
         if not self._ctrl.is_connected():
             raise RuntimeError("Not connected")
-        # TODO: FB100 실제 PV read 구현 후 self._ctrl.read().currentTemperature 사용
-        self._mock_temp += 0.01
-        return {"currentTemperature": round(self._mock_temp, 2), "unit": "C"}
+        # 실제 FB100 read (M1/MS/O1/O2). 실패하면 예외 전파 (mock fallback 없음).
+        return self._ctrl.read_dashboard_values()
 
     def is_connected(self) -> bool:
         return self._ctrl.is_connected()
@@ -322,8 +340,9 @@ class TemperatureActor:
             return self._handle_connect(command)
         elif action == "disconnect":
             return self._handle_disconnect(command)
-        elif action == "read_current":
-            return self._handle_read_current(command)
+        # read_status: 신규 명칭. read_current: deprecated alias (동일 동작)
+        elif action in ("read_status", "read_current"):
+            return self._handle_read_status(command)
         else:
             return CommandResult(
                 command_id=command.command_id,
@@ -355,11 +374,17 @@ class TemperatureActor:
         ok = self._adapter.connect(
             port=port, baudrate=baudrate, timeout_ms=timeout_ms, model=model
         )
+        # 연결 성공 시 폴링 자동 시작 (Tkinter: connect→자동 폴링, 사용자 start 버튼 없음)
+        if ok:
+            self.start_polling(
+                device_id=command.device_id,
+                interval_sec=self._polling_interval_sec,
+            )
         return CommandResult(
             command_id=command.command_id,
             ok=ok,
             device_id=command.device_id,
-            data={"connected": ok, "model": model, "polling": False} if ok else {},
+            data={"connected": ok, "model": model, "polling": ok} if ok else {},
             error=None if ok else "connect failed",
         )
 
@@ -377,7 +402,7 @@ class TemperatureActor:
             error=None if ok else "disconnect failed",
         )
 
-    def _handle_read_current(self, command: DeviceCommand) -> CommandResult:
+    def _handle_read_status(self, command: DeviceCommand) -> CommandResult:
         if not self._adapter.is_connected():
             return CommandResult(
                 command_id=command.command_id,
@@ -386,7 +411,7 @@ class TemperatureActor:
                 data={},
                 error="Temperature device is not connected",
             )
-        data = self._adapter.read_current()
+        data = self._adapter.read_dashboard_values()
         data["connected"] = True
         return CommandResult(
             command_id=command.command_id,
@@ -398,7 +423,7 @@ class TemperatureActor:
     # ── polling loop ──────────────────────────────────────────────────────────
 
     def _polling_loop(self) -> None:
-        """drift-free tick 방식으로 polling_queue에 read_current command를 넣는다.
+        """drift-free tick 방식으로 polling_queue에 read_status command를 넣는다.
 
         controller를 직접 호출하지 않는다 — 반드시 queue를 통한다.
         """
@@ -416,7 +441,7 @@ class TemperatureActor:
                     device_id=device_id,
                     device_type="temperature",
                     queue_type=CommandQueueType.POLLING,
-                    action="read_current",
+                    action="read_status",
                     payload={},
                     response_mode=ResponseMode.NONE,
                     context={"origin": "polling_loop"},

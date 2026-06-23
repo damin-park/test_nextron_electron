@@ -63,7 +63,11 @@ export function probeTemperatureDevice(
   return apiPost<ApiCommandResponse>(tempPath.probe(deviceId));
 }
 
-/** 폴링 시작 */
+/**
+ * 폴링 시작 (내부용).
+ * 폴링은 connect 시 backend가 자동 시작하므로 UI에서 직접 호출하지 않는다.
+ * 진단/유지보수 목적의 내부 API로만 유지한다.
+ */
 export function startTemperaturePolling(
   deviceId: string,
   intervalSec?: number,
@@ -73,7 +77,10 @@ export function startTemperaturePolling(
   });
 }
 
-/** 폴링 중지 */
+/**
+ * 폴링 중지 (내부용).
+ * 폴링은 disconnect 시 backend가 자동 중지하므로 UI에서 직접 호출하지 않는다.
+ */
 export function stopTemperaturePolling(
   deviceId: string,
 ): Promise<ApiCommandResponse> {
