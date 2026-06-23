@@ -1,7 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from backend.handlers.handler_loader import HandlerLoader
 from backend.router import api_router
 
 
@@ -16,7 +14,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    HandlerLoader.load_handlers()
     app.include_router(api_router)
     return app
 
