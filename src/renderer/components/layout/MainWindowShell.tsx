@@ -18,22 +18,18 @@ import { GraphPanel } from '../../features/graph/GraphPanel';
 import type { ControlMode } from '../../shared/types/ui';
 import { MenuBar } from './MenuBar';
 import { SideMenu } from './SideMenu';
+import type { SideMenuItemConfig } from './sideMenuPreset';
 import { useSplitter } from './useSplitter';
 
 export interface MainWindowShellProps {
   currentMode: ControlMode;
-  ivEnabled: boolean;
-  onModeSelected: (mode: ControlMode) => void;
-  onResults: () => void;
-  onSettings: () => void;
+  /** 사이드 메뉴 항목 (preset 에서 생성하여 주입) */
+  sideMenuItems: SideMenuItemConfig[];
 }
 
 export function MainWindowShell({
   currentMode,
-  ivEnabled,
-  onModeSelected,
-  onResults,
-  onSettings,
+  sideMenuItems,
 }: MainWindowShellProps): ReactElement {
   const { controlPanelRef, workAreaRef, splitterRef, onPointerDown } = useSplitter();
 
@@ -44,10 +40,7 @@ export function MainWindowShell({
         <SideMenu
           version={APP_VERSION}
           currentMode={currentMode}
-          enabledById={{ iv: ivEnabled }}
-          onModeSelected={onModeSelected}
-          onResults={onResults}
-          onSettings={onSettings}
+          items={sideMenuItems}
         />
         <div className="main-content">
           <Dashboard />

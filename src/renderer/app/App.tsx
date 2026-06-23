@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { MainWindowShell } from '../components/layout/MainWindowShell';
+import { createDefaultSideMenuItems } from '../components/layout/sideMenuPreset';
 import { openSettings } from '../services/backendConnection';
 import { RECIPE, type ControlMode } from '../shared/types/ui';
 
@@ -13,17 +14,18 @@ export function App(): ReactElement {
   const [currentMode, setCurrentMode] = useState<ControlMode>(RECIPE);
   const [ivEnabled] = useState(false);
 
+  const sideMenuItems = createDefaultSideMenuItems({
+    ivEnabled,
+    onModeSelected: setCurrentMode,
+    onResults: () => {
+      /* TODO: Results 버튼 */
+    },
+    onSettings: () => {
+      void openSettings();
+    },
+  });
+
   return (
-    <MainWindowShell
-      currentMode={currentMode}
-      ivEnabled={ivEnabled}
-      onModeSelected={setCurrentMode}
-      onResults={() => {
-        /* TODO: Results 버튼 */
-      }}
-      onSettings={() => {
-        void openSettings();
-      }}
-    />
+    <MainWindowShell currentMode={currentMode} sideMenuItems={sideMenuItems} />
   );
 }

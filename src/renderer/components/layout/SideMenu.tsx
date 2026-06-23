@@ -1,58 +1,34 @@
 /**
  * 좌측 사이드 메뉴 (component/side_menu 재현).
  *
+ * 메뉴 항목은 sideMenuPreset 에서 주입받는다(items prop).
+ * 각 항목은 자체 onClick 콜백을 가지므로, 항목 추가/제거 시
+ * 이 컴포넌트를 수정할 필요가 없다.
+ *
  * 상단 그룹: Recipe / Manual / IV (모드 전환)
  * 하단 그룹: Results / Settings (액션)
  * 최하단: 버전 라벨
  */
 import type { ReactElement } from 'react';
-import { getIconGlyph, type IconName } from '../../shared/icons/materialSymbols';
+import { getIconGlyph } from '../../shared/icons/materialSymbols';
 import type { ControlMode } from '../../shared/types/ui';
-
-type ItemType = 'mode' | 'action';
-
-interface SideMenuItemConfig {
-  id: string;
-  label: string;
-  icon: IconName;
-  type: ItemType;
-  mode?: ControlMode;
-  group: 'top' | 'bottom';
-  hasBadge?: boolean;
-}
-
-const ITEMS: SideMenuItemConfig[] = [
-  { id: 'recipe', label: 'Recipe', icon: 'description', type: 'mode', mode: 'recipe', group: 'top' },
-  { id: 'manual', label: 'Manual', icon: 'switches', type: 'mode', mode: 'manual', group: 'top', hasBadge: true },
-  { id: 'iv', label: 'IV', icon: 'iv_measurement', type: 'mode', mode: 'iv', group: 'top' },
-  { id: 'results', label: 'Results', icon: 'table', type: 'action', group: 'bottom' },
-  { id: 'settings', label: 'Settings', icon: 'settings', type: 'action', group: 'bottom' },
-];
+import type { SideMenuItemConfig } from './sideMenuPreset';
 
 export interface SideMenuProps {
   version: string;
   currentMode: ControlMode;
-  /** id 별 활성/비활성 상태. 값이 false 인 항목만 비활성 처리된다. */
-  enabledById?: Record<string, boolean>;
-  /** id 별 표시/숨김 상태. 값이 false 인 항목만 숨김 처리된다. */
-  visibleById?: Record<string, boolean>;
-  onModeSelected?: (mode: ControlMode) => void;
-  onResults?: () => void;
-  onSettings?: () => void;
+  /** 렌더링할 메뉴 항목 목록 (preset 에서 생성하여 주입) */
+  items: SideMenuItemConfig[];
 }
 
 export function SideMenu({
   version,
   currentMode,
-  enabledById,
-  visibleById,
-  onModeSelected,
-  onResults,
-  onSettings,
+  items,
 }: SideMenuProps): ReactElement {
   const renderItem = (config: SideMenuItemConfig): ReactElement => {
-    const disabled = enabledById?.[config.id] === false;
-    const hidden = visibleById?.[config.id] === false;
+    const disabled = config.disabled === true;
+    const hidden = config.hidden === true;
     const selected = config.type === 'mode' && config.mode === currentMode;
 
     const classNames = ['side-menu__item'];
@@ -73,13 +49,11 @@ export function SideMenu({
       if (disabled) {
         return;
       }
-      if (config.type === 'mode' && config.mode) {
-        onModeSelected?.(config.mode);
-      } else if (config.id === 'results') {
-        onResults?.();
-      } else if (config.id === 'settings') {
-        onSettings?.();
+      // 모드 항목: 이미 선택된 모드면 무시 (item.py _on_click 동작 재현)
+      if (config.type === 'mode' && selected) {
+        return;
       }
+      config.onClick?.();
     };
 
     return (
@@ -103,10 +77,10 @@ export function SideMenu({
   return (
     <div className="side-menu">
       <div className="side-menu__group side-menu__group--top">
-        {ITEMS.filter((item) => item.group === 'top').map(renderItem)}
+        {items.filter((item) => item.group === 'top').map(renderItem)}
       </div>
       <div className="side-menu__group side-menu__group--bottom">
-        {ITEMS.filter((item) => item.group === 'bottom').map(renderItem)}
+        {items.filter((item) => item.group === 'bottom').map(renderItem)}
       </div>
       <div className="version-label">{version}</div>
     </div>
