@@ -1,8 +1,10 @@
 /**
  * 대시보드 (dashboard_manager.py 재현).
- * Temperature / Humidity / MFC / Pressure / SMU 등 장비 패널을 가로로 나열한다.
+ * Temperature 카드는 실시간 데이터 + 연결 액션을 제공한다.
+ * 나머지 장비 패널(Humidity/MFC/Pressure/SMU)은 placeholder.
  */
 import type { ReactElement } from 'react';
+import { TemperatureCard } from './TemperatureCard';
 
 interface Reading {
   label: string;
@@ -16,15 +18,7 @@ interface DashboardPanelConfig {
   readings: Reading[];
 }
 
-const DEFAULT_PANELS: DashboardPanelConfig[] = [
-  {
-    id: 'temperature',
-    badge: 'Temp',
-    readings: [
-      { label: 'SV', value: '--', unit: '°C' },
-      { label: 'PV', value: '--', unit: '°C' },
-    ],
-  },
+const PLACEHOLDER_PANELS: DashboardPanelConfig[] = [
   {
     id: 'humidity',
     badge: 'Humid',
@@ -62,7 +56,11 @@ const DEFAULT_PANELS: DashboardPanelConfig[] = [
 export function Dashboard(): ReactElement {
   return (
     <div className="dashboard">
-      {DEFAULT_PANELS.map((config) => (
+      {/* Temperature 카드 (실시간 + 연결 액션) */}
+      <TemperatureCard />
+
+      {/* 나머지 장비 패널 (placeholder) */}
+      {PLACEHOLDER_PANELS.map((config) => (
         <div key={config.id} className="dashboard__panel" data-id={config.id}>
           <div className="dashboard__badge">{config.badge}</div>
           <div className="dashboard__readings">

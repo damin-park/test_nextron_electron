@@ -86,3 +86,34 @@ export const DEFAULT_SERIAL_CONNECTION: Omit<ConnectionConfig, 'port'> = {
   writeTermination: '\r\n',
   readTermination: '\r\n',
 };
+
+/** Backend Actor 기반 커맨드 API 응답 */
+export interface ApiCommandResponse {
+  status: 'ok' | 'error' | 'accepted';
+  commandId: string;
+  deviceId: string | null;
+  data: Record<string, unknown>;
+  error: string | null;
+}
+
+/** Temperature 장비 상태 (/state 엔드포인트 응답의 data 필드) */
+export interface TemperatureDeviceState {
+  deviceId: string;
+  deviceType?: string;
+  model?: string;
+  connected?: boolean;
+  polling?: boolean;
+  currentTemperature?: number | null;
+  unit?: string | null;
+  lastUpdated?: string | null;
+  lastCommandId?: string | null;
+  error?: string | null;
+}
+
+/** Temperature 장비 연결 요청 (커맨드 기반) */
+export interface TemperatureDeviceConnectRequest {
+  port?: string;
+  baudrate?: number;
+  timeoutSec?: number;
+  model?: string;
+}

@@ -20,6 +20,10 @@ import {
   closeInitConnectWindow,
   createInitConnectWindow,
 } from './init-connect-window';
+import {
+  closeSettingsWindow,
+  createSettingsWindow,
+} from './settings-window';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -74,6 +78,14 @@ ipcMain.handle('backend:get-connection', () => getBackendConnection());
 ipcMain.handle('backend:get-status', () => getBackendStatus());
 ipcMain.handle('app:request-shutdown', () => {
   app.quit();
+});
+
+// Settings 팝업 lifecycle.
+ipcMain.handle('settings:open', () => {
+  createSettingsWindow(mainWindow);
+});
+ipcMain.handle('settings:close', () => {
+  closeSettingsWindow();
 });
 
 const SPLASH_MIN_MS = 1500;

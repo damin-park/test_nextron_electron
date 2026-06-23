@@ -335,7 +335,7 @@ export const getRegisteredDevicesSummary =
   async (): Promise<RegisteredDevicesSummary> => {
     const { url } = getBackendInfo();
     const summary = await httpGetJson<RegisteredDevicesSummary>(
-      `${url}/api/v1/devices/registered/summary`,
+      `${url}/api/devices/registered/summary`,
     );
 
     return summary ?? { hasRegisteredDevices: false, count: 0, devices: [] };

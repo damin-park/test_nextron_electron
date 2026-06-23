@@ -9,11 +9,11 @@ import type {
 } from './deviceTypes';
 
 export function getRegisteredSummary(): Promise<RegisteredDevicesSummary> {
-  return apiGet<RegisteredDevicesSummary>('/api/v1/devices/registered/summary');
+  return apiGet<RegisteredDevicesSummary>('/api/devices/registered/summary');
 }
 
 export function registerDevice(
   request: RegisterDeviceRequest,
 ): Promise<RegisteredDevice> {
-  return apiPost<RegisteredDevice>('/api/v1/devices/register', request);
+  return apiPost<RegisteredDevice>('/api/devices/register', request);
 }

@@ -7,6 +7,7 @@
  *               [대시보드]
  *               [컨트롤패널 | 스플리터 | 그래프패널]
  *
+ * Settings 는 별도 팝업 윈도우로 열린다(인라인 대체 아님).
  * 기존 vanilla DOM 구조(mainWindow.ts)와 동일한 계층/클래스를 유지한다.
  */
 import type { ReactElement } from 'react';

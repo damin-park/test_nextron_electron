@@ -1,17 +1,16 @@
-/**
- * ��猷⑦듃 而댄룷�뚰듃.
- * 紐⑤뱶/�ъ씠�쒕찓���곹깭瑜�愿由ы븯怨�MainWindowShell ���꾨떖�쒕떎.
- * backend �곌껐 �곹깭瑜�援щ룆��ConnectionBanner / Dashboard ���꾨떖�쒕떎.
+﻿/**
+ * 루트 컴포넌트.
+ * 모드/SMU 상태를 관리하고 MainWindowShell 을 감싼다.
+ * Settings 는 별도 팝업 윈도우(openSettings)로 연다.
  */
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { MainWindowShell } from '../components/layout/MainWindowShell';
+import { openSettings } from '../services/backendConnection';
 import { RECIPE, type ControlMode } from '../shared/types/ui';
 
 export function App(): ReactElement {
   const [currentMode, setCurrentMode] = useState<ControlMode>(RECIPE);
-
-  // IV ��SMU �곌껐 �쒖뿉留��몄텧. 珥덇린�먮뒗 鍮꾪솢���곹깭瑜��좎���쒕떎.
   const [ivEnabled] = useState(false);
 
   return (
@@ -20,10 +19,10 @@ export function App(): ReactElement {
       ivEnabled={ivEnabled}
       onModeSelected={setCurrentMode}
       onResults={() => {
-        /* TODO: Results 李�*/
+        /* TODO: Results 버튼 */
       }}
       onSettings={() => {
-        /* TODO: Settings 李�*/
+        void openSettings();
       }}
     />
   );

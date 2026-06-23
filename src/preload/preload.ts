@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('nextron', {
     ipcRenderer.invoke('backend:get-status'),
   requestAppShutdown: (): Promise<void> =>
     ipcRenderer.invoke('app:request-shutdown'),
+  // Settings 팝업 lifecycle.
+  openSettings: (): Promise<void> => ipcRenderer.invoke('settings:open'),
+  closeSettings: (): Promise<void> => ipcRenderer.invoke('settings:close'),
   // Init Connect 윈도우 lifecycle (REST 호출은 renderer service 계층에서 baseUrl 로 수행).
   completeInitConnect: (): Promise<void> =>
     ipcRenderer.invoke('init-connect:complete'),

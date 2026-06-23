@@ -7,14 +7,26 @@ import './index.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { InitConnectApp } from './features/init-connect/InitConnectApp';
+import { SettingsApp } from './features/settings/SettingsApp';
 
 const container = document.querySelector<HTMLDivElement>('#app');
 
-const isInitConnect = window.location.hash.includes('init-connect');
+const hash = window.location.hash;
+const isInitConnect = hash.includes('init-connect');
+const isSettings = hash.includes('settings');
+
+function selectRoot() {
+  if (isInitConnect) return <InitConnectApp />;
+  if (isSettings) return <SettingsApp />;
+  return <App />;
+}
 
 if (container) {
   createRoot(container).render(
-    <StrictMode>{isInitConnect ? <InitConnectApp /> : <App />}</StrictMode>,
+    <StrictMode>
+      <ErrorBoundary>{selectRoot()}</ErrorBoundary>
+    </StrictMode>,
   );
 }

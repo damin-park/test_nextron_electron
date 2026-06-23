@@ -7,7 +7,12 @@ export type IconName =
   | 'switches'
   | 'iv_measurement'
   | 'table'
-  | 'settings';
+  | 'settings'
+  | 'thermostat'
+  | 'link'
+  | 'collapse_left'
+  | 'collapse_right'
+  | 'arrow_back';
 
 const ICON_GLYPHS: Record<IconName, string> = {
   description: '\uE873',
@@ -15,6 +20,11 @@ const ICON_GLYPHS: Record<IconName, string> = {
   iv_measurement: '\uE6E1',
   table: '\uF191',
   settings: '\uE8B8',
+  thermostat: '\uF076',
+  link: '\uE250',
+  collapse_left: '\uEAC3', // keyboard_double_arrow_left
+  collapse_right: '\uEAC9', // keyboard_double_arrow_right
+  arrow_back: '\uE5C4',
 };
 
 export function getIconGlyph(name: IconName): string {

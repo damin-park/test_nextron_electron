@@ -50,6 +50,21 @@ export async function requestAppShutdown(): Promise<void> {
   return window.nextron.requestAppShutdown();
 }
 
+export async function openSettings(): Promise<void> {
+  if (!hasBridge()) {
+    return;
+  }
+  return window.nextron.openSettings();
+}
+
+export async function closeSettings(): Promise<void> {
+  if (!hasBridge()) {
+    window.close();
+    return;
+  }
+  return window.nextron.closeSettings();
+}
+
 export async function completeInitConnect(): Promise<void> {
   if (!hasBridge()) {
     return;

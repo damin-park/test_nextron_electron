@@ -12,6 +12,8 @@ declare global {
       getBackendConnection: () => Promise<BackendConnectionInfo>;
       getBackendStatus: () => Promise<BackendRuntimeStatus>;
       requestAppShutdown: () => Promise<void>;
+      openSettings: () => Promise<void>;
+      closeSettings: () => Promise<void>;
       completeInitConnect: () => Promise<void>;
       cancelInitConnect: () => Promise<void>;
       onSystemEvent: (callback: (event: SystemEvent) => void) => () => void;

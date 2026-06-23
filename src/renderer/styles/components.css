@@ -205,10 +205,10 @@
  * Dashboard (dashboard_manager.py)
  * ────────────────────────────────────────────────────────── */
 .dashboard {
-  flex: 0 0 var(--dashboard-height);
-  height: var(--dashboard-height);
+  flex: 0 0 auto;
+  min-height: var(--dashboard-height);
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 8px;
   padding: 6px 10px;
   background: var(--md3-surface);
@@ -353,4 +353,601 @@
   justify-content: center;
   color: var(--md3-text-disabled);
   font-size: 13px;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Error Boundary
+ * ────────────────────────────────────────────────────────── */
+.error-boundary {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: var(--md3-surface);
+  color: var(--md3-on-surface);
+  text-align: center;
+}
+
+.error-boundary__title {
+  font-family: var(--font-medium);
+  font-size: 16px;
+  color: var(--md3-on-surface);
+}
+
+.error-boundary__message {
+  font-size: 13px;
+  color: #ff6b6b;
+  max-width: 520px;
+  word-break: break-word;
+}
+
+.error-boundary__retry {
+  height: 34px;
+  padding: 0 18px;
+  border-radius: 6px;
+  border: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+  font-family: var(--font-medium);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.error-boundary__retry:hover {
+  background: var(--md3-surface-container-highest);
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Temperature Card (TemperatureCard.tsx)
+ * Tkinter temperature_panel.py 정확 재현 (260px × 84px)
+ * 패널 내부에 액션 버튼 없음 — link 아이콘만.
+ * ────────────────────────────────────────────────────────── */
+.temp-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  width: 260px;
+  background: var(--md3-surface-container);
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.temp-card.is-collapsed {
+  width: 169px; /* 260 * 0.65 */
+}
+
+/* ─── 타이틀 행 ─── */
+.temp-card__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 2px 6px 0;
+}
+
+/* 연결 link 아이콘: 좌상단 절대배치 */
+.temp-card__conn-link {
+  position: absolute;
+  left: 4px;
+  top: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.temp-card__conn-link:hover {
+  opacity: 0.8;
+}
+
+.temp-card__conn-link .material-symbols-outlined {
+  font-size: 17px;
+}
+
+/* 타이틀(아이콘 + 텍스트): 중앙 정렬 */
+.temp-card__title-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.temp-card__title-icon {
+  font-size: 16px;
+  color: var(--md3-on-surface);
+}
+
+.temp-card__title {
+  font-family: var(--font-medium);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--md3-on-surface); /* #E0E0E0, 연결 시 일반 텍스트색 */
+  line-height: 1;
+}
+
+/* 접기/펼치기 아이콘: 우상단 절대배치 */
+.temp-card__collapse {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--md3-on-surface-variant);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.temp-card__collapse:hover:not(:disabled) {
+  color: var(--md3-on-surface);
+}
+
+.temp-card__collapse:disabled {
+  color: #3a3a3a;
+  cursor: default;
+}
+
+.temp-card__collapse .material-symbols-outlined {
+  font-size: 17px;
+}
+
+/* ─── 측정값 본문 (2-column) ─── */
+.temp-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  padding: 4px 8px 8px;
+}
+
+.temp-card__left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 108px;
+}
+
+.temp-card__right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  padding-left: 8px;
+}
+
+.temp-card__row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.temp-card__row--right {
+  justify-content: flex-end;
+}
+
+/* 좌측 SV/PV 라벨 */
+.temp-card__label {
+  font-family: var(--font-medium);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--md3-on-surface); /* TEXT_COLOR */
+  width: 18px;
+}
+
+/* 우측 Hot/Cool Power 라벨 */
+.temp-card__label-wide {
+  font-family: var(--font-medium);
+  font-size: 12px;
+  color: var(--md3-on-surface-variant); /* SUB_TEXT_COLOR #CCCCCC */
+  text-align: right;
+}
+
+/* 좌측 큰 값 (SV/PV) */
+.temp-card__value {
+  font-family: var(--font-medium);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--md3-on-surface);
+  min-width: 56px;
+  text-align: center;
+}
+
+.temp-card__value--sv {
+  color: #ff383c; /* Tkinter SV_COLOR */
+}
+
+.temp-card__value--pv {
+  color: #0088ff; /* Tkinter PV_COLOR */
+}
+
+/* 우측 작은 값 (Power) */
+.temp-card__value-sm {
+  font-family: var(--font-medium);
+  font-size: 13px;
+  color: var(--md3-on-surface);
+  min-width: 40px;
+  text-align: right;
+}
+
+.temp-card__unit {
+  font-size: 10px;
+  color: var(--md3-on-surface-variant);
+}
+
+/* ─── 미연결(dim) 상태 ─── */
+.temp-card.is-dimmed .temp-card__title,
+.temp-card.is-dimmed .temp-card__title-icon {
+  color: #666666;
+}
+
+.temp-card.is-dimmed .temp-card__label,
+.temp-card.is-dimmed .temp-card__label-wide {
+  color: #666666;
+}
+
+.temp-card.is-dimmed .temp-card__value,
+.temp-card.is-dimmed .temp-card__value--sv,
+.temp-card.is-dimmed .temp-card__value--pv,
+.temp-card.is-dimmed .temp-card__value-sm,
+.temp-card.is-dimmed .temp-card__unit {
+  color: #555555;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Settings Window (SettingsApp.tsx) — 팝업 창 레이아웃
+ * Tkinter settings.py (Toplevel) 재현: 좌측 메뉴 + 우측 상세
+ * ────────────────────────────────────────────────────────── */
+.settings-window {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  background: var(--md3-surface);
+  color: var(--md3-on-surface);
+  overflow: hidden;
+}
+
+.settings-window__sidebar {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 12px;
+  background: var(--md3-surface-container);
+  border-right: 1px solid var(--md3-outline-variant);
+}
+
+.settings-window__title {
+  font-family: var(--font-medium);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--md3-on-surface);
+  padding: 4px 8px 12px;
+}
+
+.settings-window__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-window__menu-item {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: var(--font-medium);
+  font-size: 13px;
+  color: var(--md3-on-surface-variant);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.settings-window__menu-item:hover:not(.is-disabled) {
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+}
+
+.settings-window__menu-item.is-active {
+  background: var(--md3-surface-container-highest);
+  color: var(--md3-on-surface);
+}
+
+.settings-window__menu-item.is-disabled {
+  color: var(--md3-text-disabled);
+  cursor: default;
+}
+
+.settings-window__detail {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.settings-window__placeholder {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md3-text-disabled);
+  font-size: 13px;
+}
+
+/* ──────────────────────────────────────────────────────────
+ * Connection Settings Panel (ConnectionSettings.tsx)
+ * Tkinter connection_setting.py 재현
+ * ────────────────────────────────────────────────────────── */
+.conn-settings {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--md3-surface-container-low);
+  overflow-y: auto;
+}
+
+/* ─── 헤더 ─── */
+.conn-settings__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 44px;
+  border-bottom: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container);
+  flex-shrink: 0;
+}
+
+.conn-settings__title {
+  flex: 1 1 auto;
+  font-family: var(--font-medium);
+  font-size: 15px;
+  color: var(--md3-on-surface);
+}
+
+.conn-settings__close-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--md3-on-surface-variant);
+  font-family: var(--font-medium);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.conn-settings__close-btn:hover {
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+}
+
+.conn-settings__close-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* ─── 본문 ─── */
+.conn-settings__body {
+  flex: 1 1 auto;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.conn-settings__device-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--md3-surface-container);
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 8px;
+  padding: 14px 16px;
+  max-width: 480px;
+}
+
+.conn-settings__device-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-medium);
+  font-size: 14px;
+  color: var(--md3-on-surface);
+}
+
+.conn-settings__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.conn-settings__status-text {
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.conn-settings__device-id {
+  font-size: 12px;
+  color: var(--md3-on-surface-variant);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conn-settings__device-id code {
+  font-size: 11px;
+  color: var(--md3-secondary);
+  background: var(--md3-surface-container-high);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.conn-settings__model-badge {
+  font-size: 11px;
+  color: var(--md3-on-surface-variant);
+  background: var(--md3-primary-container);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* ─── 폼 ─── */
+.conn-settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conn-settings__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.conn-settings__label {
+  font-family: var(--font-medium);
+  font-size: 12px;
+  color: var(--md3-on-surface-variant);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.conn-settings__select,
+.conn-settings__input {
+  flex: 1 1 auto;
+  height: 32px;
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 4px;
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+  font-family: var(--font-base);
+  font-size: 13px;
+  padding: 0 8px;
+  outline: none;
+  min-width: 0;
+}
+
+.conn-settings__select:focus,
+.conn-settings__input:focus {
+  border-color: var(--md3-primary);
+}
+
+.conn-settings__select:disabled,
+.conn-settings__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.conn-settings__port-row {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.conn-settings__port-row .conn-settings__select {
+  flex: 1 1 auto;
+}
+
+/* ─── 버튼 ─── */
+.conn-settings__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.conn-settings__btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface-variant);
+  font-family: var(--font-medium);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.conn-settings__btn:hover:not(:disabled) {
+  background: var(--md3-surface-container-highest);
+  color: var(--md3-on-surface);
+}
+
+.conn-settings__btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.conn-settings__btn--ghost {
+  border-color: var(--md3-outline-variant);
+}
+
+.conn-settings__btn--primary {
+  border-color: #34c759;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.conn-settings__btn--primary:hover:not(:disabled) {
+  background: rgba(52, 199, 89, 0.18);
+}
+
+.conn-settings__btn--danger {
+  border-color: #e6231c;
+  color: #e6231c;
+  background: rgba(230, 35, 28, 0.08);
+}
+
+.conn-settings__btn--danger:hover:not(:disabled) {
+  background: rgba(230, 35, 28, 0.18);
+}
+
+/* ─── 에러 ─── */
+.conn-settings__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: rgba(210, 0, 0, 0.12);
+  border: 1px solid rgba(210, 0, 0, 0.3);
+  font-size: 12px;
+  color: #ff6b6b;
+  line-height: 1.4;
+}
+
+.conn-settings__error-close {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: auto;
 }

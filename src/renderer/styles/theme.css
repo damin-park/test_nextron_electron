@@ -17,6 +17,45 @@
   font-display: swap;
 }
 
+/*
+ * Material Symbols 공통 클래스.
+ * 글리프(유니코드 코드포인트) 방식으로 렌더링하므로 font-family 지정이 필수다.
+ * (이 base 규칙이 없으면 코드포인트가 기본 폰트로 떨어져 tofu 박스로 보인다)
+ * font-size 는 각 사용처에서 지정한다.
+ */
+.material-symbols-outlined,
+.material-symbols-filled {
+  line-height: 1;
+  font-weight: normal;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-feature-settings: 'liga';
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+}
+
+.material-symbols-filled {
+  font-family: 'Material Symbols Filled';
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
 :root {
   /* Surface Colors (배경) */
   --md3-surface: #121212;
