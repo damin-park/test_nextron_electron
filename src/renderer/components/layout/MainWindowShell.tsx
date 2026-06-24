@@ -15,6 +15,7 @@ import { APP_VERSION } from '../../../shared/app-version';
 import { Dashboard } from '../../features/dashboard/Dashboard';
 import { ControlPanel } from '../../features/control-panel/ControlPanel';
 import { GraphPanel } from '../../features/graph/GraphPanel';
+import { useTemperatureConnection } from '../../features/temperature/useTemperatureConnection';
 import type { ControlMode } from '../../shared/types/ui';
 import { MenuBar } from './MenuBar';
 import { SideMenu } from './SideMenu';
@@ -32,6 +33,7 @@ export function MainWindowShell({
   sideMenuItems,
 }: MainWindowShellProps): ReactElement {
   const { controlPanelRef, workAreaRef, splitterRef, onPointerDown } = useSplitter();
+  const temperatureConnection = useTemperatureConnection('temperature-1');
 
   return (
     <div className="app-root">
@@ -43,7 +45,7 @@ export function MainWindowShell({
           items={sideMenuItems}
         />
         <div className="main-content">
-          <Dashboard />
+          <Dashboard temperatureConnection={temperatureConnection} />
           <div className="work-area" ref={workAreaRef}>
             <ControlPanel mode={currentMode} ref={controlPanelRef} />
             <div
@@ -51,7 +53,7 @@ export function MainWindowShell({
               ref={splitterRef}
               onPointerDown={onPointerDown}
             />
-            <GraphPanel />
+            <GraphPanel temperatureState={temperatureConnection.state} />
           </div>
         </div>
       </div>

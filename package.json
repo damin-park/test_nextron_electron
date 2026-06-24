@@ -49,6 +49,7 @@
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "uplot": "^1.6.32"
   }
 }

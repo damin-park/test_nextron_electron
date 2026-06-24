@@ -4,6 +4,7 @@
  * 나머지 장비 패널(Humidity/MFC/Pressure/SMU)은 placeholder.
  */
 import type { ReactElement } from 'react';
+import type { UseTemperatureConnectionResult } from '../temperature/useTemperatureConnection';
 import { TemperatureCard } from './TemperatureCard';
 
 interface Reading {
@@ -53,11 +54,17 @@ const PLACEHOLDER_PANELS: DashboardPanelConfig[] = [
   },
 ];
 
-export function Dashboard(): ReactElement {
+interface DashboardProps {
+  temperatureConnection: UseTemperatureConnectionResult;
+}
+
+export function Dashboard({
+  temperatureConnection,
+}: DashboardProps): ReactElement {
   return (
     <div className="dashboard">
       {/* Temperature 카드 (실시간 + 연결 액션) */}
-      <TemperatureCard />
+      <TemperatureCard connection={temperatureConnection} />
 
       {/* 나머지 장비 패널 (placeholder) */}
       {PLACEHOLDER_PANELS.map((config) => (

@@ -16,11 +16,9 @@
 import { useState, type ReactElement } from 'react';
 import { getIconGlyph } from '../../shared/icons/materialSymbols';
 import {
-  useTemperatureConnection,
   type ConnectionActionState,
+  type UseTemperatureConnectionResult,
 } from '../temperature/useTemperatureConnection';
-
-const DEFAULT_DEVICE_ID = 'temperature-1';
 
 /** 연결 link 아이콘 색상 (dashboard_styles.py 기준) */
 function connIconColor(
@@ -39,10 +37,15 @@ function formatValue(value: number | null | undefined): string {
   return value.toFixed(1);
 }
 
-export function TemperatureCard(): ReactElement {
+interface TemperatureCardProps {
+  connection: UseTemperatureConnectionResult;
+}
+
+export function TemperatureCard({
+  connection,
+}: TemperatureCardProps): ReactElement {
   const [collapsed, setCollapsed] = useState(false);
-  const { state, actionState, connect, disconnect } =
-    useTemperatureConnection(DEFAULT_DEVICE_ID);
+  const { state, actionState, connect, disconnect } = connection;
 
   const connected = state?.connected === true;
   const unit = state?.unit ?? '°C';
