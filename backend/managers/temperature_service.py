@@ -1,21 +1,19 @@
-"""Temperature service (싱글톤).
+"""Legacy temperature service for init-connect compatibility.
 
-connect/read/probe/disconnect 명령을 asyncio.Lock 으로 직렬화하여
-connect-during-read, read-during-disconnect, probe-during-register 등의
-충돌을 방지한다. blocking serial I/O 는 asyncio.to_thread 로 분리한다.
+New device-id based endpoints use backend.services.temperature_service with
+TemperatureActor. This service remains only for older imports and avoids the
+removed adapter/controller I/O shape.
 """
 
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Optional
 
-from backend.controllers.temperature import (
-    FB100TemperatureController,
-    MockTemperatureController,
-    TemperatureControllerBase,
-)
+from backend.controllers.temperature.fb100 import FB100
 from backend.managers.device_mode import get_device_mode
+from backend.schemas.command import CommandQueueType, DeviceCommand
 from backend.schemas.device import (
     ConnectionConfig,
     DeviceMode,
@@ -23,26 +21,23 @@ from backend.schemas.device import (
     TemperatureReading,
     TemperatureStatus,
 )
+from backend.transports.mock_transport import MockTransport
+from backend.transports.serial_transport import SerialTransport
 
 
 class TemperatureService:
     _instance: Optional["TemperatureService"] = None
-    _instance_lock = asyncio.Lock()
 
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
         self._mode = get_device_mode()
-        self._controller: TemperatureControllerBase = self._make_controller()
-        # Connection Test(probe)는 mock/real 모드와 무관하게 실제 시리얼 포트를
-        # read-only 방식으로 검증한다(설정값 write 없음).
-        self._probe_controller = FB100TemperatureController()
+        self._controller = FB100()
+        self._transport = (
+            SerialTransport() if self._mode == DeviceMode.REAL else MockTransport()
+        )
+        self._connected = False
         self._port: Optional[str] = None
         self._model: Optional[str] = None
-
-    def _make_controller(self) -> TemperatureControllerBase:
-        if self._mode == DeviceMode.REAL:
-            return FB100TemperatureController()
-        return MockTemperatureController()
 
     @classmethod
     def instance(cls) -> "TemperatureService":
@@ -53,36 +48,124 @@ class TemperatureService:
     async def probe(self, request: TemperatureProbeRequest) -> bool:
         async with self._lock:
             return await asyncio.to_thread(
-                self._probe_controller.probe, request.connection, request.model
+                self._execute_probe,
+                request.connection,
+                request.model,
             )
 
     async def connect(self, connection: ConnectionConfig, model: Optional[str]) -> bool:
         async with self._lock:
-            ok = await asyncio.to_thread(self._controller.connect, connection, model)
+            ok = await asyncio.to_thread(self._execute_connect, connection, model)
             if ok:
                 self._port = connection.port
                 self._model = model
+                self._connected = True
             return ok
 
     async def disconnect(self) -> bool:
         async with self._lock:
-            ok = await asyncio.to_thread(self._controller.disconnect)
-            if ok:
-                self._port = None
-            return ok
+            self._transport.close()
+            self._connected = False
+            self._port = None
+            return True
 
     async def read(self) -> TemperatureReading:
         async with self._lock:
-            return await asyncio.to_thread(self._controller.read)
+            if not self._connected:
+                return TemperatureReading(connected=False)
+            result = await asyncio.to_thread(self._execute_read_status)
+            data = result.data if result.ok else {}
+            return TemperatureReading(
+                connected=result.ok,
+                currentTemperature=data.get("currentTemperature"),
+                setpoint=data.get("targetSetpoint") or data.get("sv"),
+                unit=str(data.get("unit") or "C"),
+            )
 
     async def status(self) -> TemperatureStatus:
         async with self._lock:
-            connected = self._controller.is_connected()
-            reading = await asyncio.to_thread(self._controller.read) if connected else None
+            reading = None
+            if self._connected:
+                result = await asyncio.to_thread(self._execute_read_status)
+                data = result.data if result.ok else {}
+                reading = TemperatureReading(
+                    connected=result.ok,
+                    currentTemperature=data.get("currentTemperature"),
+                    setpoint=data.get("targetSetpoint") or data.get("sv"),
+                    unit=str(data.get("unit") or "C"),
+                )
             return TemperatureStatus(
                 mode=self._mode,
-                connected=connected,
+                connected=self._connected,
                 port=self._port,
                 model=self._model,
                 reading=reading,
             )
+
+    def _execute_probe(
+        self,
+        connection: ConnectionConfig,
+        model: Optional[str],
+    ) -> bool:
+        self._transport.open(self._config(connection))
+        try:
+            command = self._command("probe", {"model": model or "FB100"})
+            responses = [
+                self._transport.transaction(tx)
+                for tx in self._controller.build_transactions(command)
+            ]
+            return self._controller.parse_result(command, responses).ok
+        finally:
+            self._transport.close()
+
+    def _execute_connect(
+        self,
+        connection: ConnectionConfig,
+        model: Optional[str],
+    ) -> bool:
+        payload = {
+            "port": connection.port,
+            "baudrate": connection.baudrate,
+            "timeoutSec": connection.timeoutMs / 1000.0,
+            "model": model or "FB100",
+        }
+        self._transport.open(self._config(connection))
+        command = self._command("connect", payload)
+        responses = [
+            self._transport.transaction(tx)
+            for tx in self._controller.build_transactions(command)
+        ]
+        result = self._controller.parse_result(command, responses)
+        if not result.ok:
+            self._transport.close()
+        return result.ok
+
+    def _execute_read_status(self):
+        command = self._command("read_status", {})
+        responses = [
+            self._transport.transaction(tx)
+            for tx in self._controller.build_transactions(command)
+        ]
+        return self._controller.parse_result(command, responses)
+
+    @staticmethod
+    def _config(connection: ConnectionConfig) -> dict:
+        return {
+            "port": connection.port,
+            "baudrate": connection.baudrate,
+            "bytesize": connection.bytesize,
+            "parity": connection.parity,
+            "stopbits": connection.stopbits,
+            "timeoutMs": connection.timeoutMs,
+        }
+
+    @staticmethod
+    def _command(action: str, payload: dict) -> DeviceCommand:
+        return DeviceCommand(
+            device_id="temperature-1",
+            device_type="temperature",
+            queue_type=CommandQueueType.CONNECTION,
+            action=action,
+            payload=payload,
+            command_id=str(uuid.uuid4()),
+        )

@@ -1,17 +1,8 @@
 """TemperatureActor.
 
-FB100 장비 I/O 접근 경로는 이 Actor의 worker thread 하나뿐이다.
-Service / Router / polling loop 모두 Actor.submit(command)를 통해서만
-장비에 접근한다.
-
-구조:
-  TemperatureActor
-  ├── IFb100Adapter (인터페이스)
-  │   ├── MockFb100Adapter   (기본 fallback, 장비 없이 Actor 구조 검증)
-  │   └── RealFb100Adapter   (NEXTRON_DEVICE_MODE=real 시 사용)
-  ├── CommandScheduler (5-priority queue)
-  ├── worker thread   (scheduler.dequeue() → _execute_command)
-  └── polling thread  (drift-free tick → polling_queue에 command enqueue)
+Temperature device I/O is serialized through this actor worker. The actor owns
+the command scheduler, protocol controller, transport, polling loop, state
+updates, and future completion.
 """
 
 from __future__ import annotations
@@ -19,11 +10,11 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from abc import ABC, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Optional
 
 from backend.actors.scheduler import CommandScheduler
+from backend.controllers.temperature.fb100 import FB100
 from backend.schemas.command import (
     CommandQueueType,
     CommandResult,
@@ -31,192 +22,37 @@ from backend.schemas.command import (
     ResponseMode,
 )
 from backend.state.state_manager import StateManager
+from backend.transports.protocol import TransportResponse
 
 logger = logging.getLogger(__name__)
 
 
-# ── Fb100 Adapter 인터페이스 ───────────────────────────────────────────────────
-
-class IFb100Adapter(ABC):
-    """FB100 장비 접근 추상 인터페이스."""
-
-    @abstractmethod
-    def probe(self, port: str = "", **kwargs: Any) -> bool:
-        """지정 포트가 FB100 응답을 반환하는지 확인."""
-
-    @abstractmethod
-    def connect(
-        self,
-        port: str = "",
-        baudrate: int = 9600,
-        timeout_ms: int = 1000,
-        model: Optional[str] = None,
-    ) -> bool:
-        """장비 연결."""
-
-    @abstractmethod
-    def disconnect(self) -> bool:
-        """장비 연결 해제."""
-
-    @abstractmethod
-    def read_dashboard_values(self) -> dict[str, Any]:
-        """Dashboard 표시용 상태 snapshot 읽기.
-
-        반환: {"sv": float, "pv": float, "hotPower": float, "coolPower": float,
-               "unit": "C"}  (FB100 PV=M1 / SV=MS / Hot=O1% / Cool=O2%)
-        명칭 주의: temperature 문맥의 'current'는 전류가 아니라 현재값(PV)을 뜻한다.
-        전류 오해를 피하기 위해 read_current 대신 read_dashboard_values 명칭을 쓴다.
-        """
-
-    @abstractmethod
-    def is_connected(self) -> bool:
-        """현재 연결 여부."""
-
-
-# ── Mock Adapter ──────────────────────────────────────────────────────────────
-
-class MockFb100Adapter(IFb100Adapter):
-    """실제 장비 없이 Actor 구조를 검증하기 위한 mock adapter."""
-
-    def __init__(self) -> None:
-        self._connected = False
-        self._model: Optional[str] = None
-        self._pv = 25.3
-        self._sv = 30.0
-        self._hot_power = 12.5
-        self._cool_power = 0.0
-
-    def probe(self, port: str = "", **kwargs: Any) -> bool:
-        return True
-
-    def connect(
-        self,
-        port: str = "",
-        baudrate: int = 9600,
-        timeout_ms: int = 1000,
-        model: Optional[str] = None,
-    ) -> bool:
-        self._connected = True
-        self._model = model or "FB100"
-        logger.info("[MockFb100] connected port=%s model=%s", port, self._model)
-        return True
-
-    def disconnect(self) -> bool:
-        self._connected = False
-        logger.info("[MockFb100] disconnected")
-        return True
-
-    def read_dashboard_values(self) -> dict[str, Any]:
-        if not self._connected:
-            raise RuntimeError("Not connected")
-        # PV 미세 변화로 폴링 갱신 확인 (mock 전용)
-        self._pv += 0.01
-        pv = round(self._pv, 2)
-        return {
-            "sv": self._sv,
-            "pv": pv,
-            "hotPower": self._hot_power,
-            "coolPower": self._cool_power,
-            "unit": "C",
-            # 구코드 호환 alias
-            "currentTemperature": pv,
-            "targetSetpoint": self._sv,
-        }
-
-    def is_connected(self) -> bool:
-        return self._connected
-
-
-# ── Real Adapter ──────────────────────────────────────────────────────────────
-
-class RealFb100Adapter(IFb100Adapter):
-    """기존 FB100TemperatureController를 래핑한 실제 adapter.
-
-    Real mode에서는 실제 FB100 read만 사용한다. read 실패 시 예외를 그대로
-    전파하며, mock 값으로 조용히 fallback하지 않는다.
-    """
-
-    def __init__(self) -> None:
-        from backend.controllers.temperature.fb100 import FB100TemperatureController
-        from backend.schemas.device import ConnectionConfig
-
-        self._ctrl = FB100TemperatureController()
-        self._ConnectionConfig = ConnectionConfig
-
-    def probe(self, port: str = "", **kwargs: Any) -> bool:
-        if not port:
-            return False
-        try:
-            from backend.schemas.device import ConnectionConfig
-
-            cfg = ConnectionConfig(port=port, baudrate=kwargs.get("baudrate", 9600))
-            return self._ctrl.probe(cfg, None)
-        except Exception:
-            return False
-
-    def connect(
-        self,
-        port: str = "",
-        baudrate: int = 9600,
-        timeout_ms: int = 1000,
-        model: Optional[str] = None,
-    ) -> bool:
-        cfg = self._ConnectionConfig(
-            port=port,
-            baudrate=baudrate,
-            timeoutMs=timeout_ms,
-        )
-        ok = self._ctrl.connect(cfg, model)
-        logger.info("[RealFb100] connect port=%s ok=%s", port, ok)
-        return ok
-
-    def disconnect(self) -> bool:
-        ok = self._ctrl.disconnect()
-        logger.info("[RealFb100] disconnect ok=%s", ok)
-        return ok
-
-    def read_dashboard_values(self) -> dict[str, Any]:
-        if not self._ctrl.is_connected():
-            raise RuntimeError("Not connected")
-        # 실제 FB100 read (M1/MS/O1/O2). 실패하면 예외 전파 (mock fallback 없음).
-        return self._ctrl.read_dashboard_values()
-
-    def is_connected(self) -> bool:
-        return self._ctrl.is_connected()
-
-
-# ── TemperatureActor ──────────────────────────────────────────────────────────
-
 class TemperatureActor:
-    """Temperature FB100 장비 전용 Actor.
-
-    FB100 장비 I/O는 이 Actor의 worker thread 하나에서만 수행된다.
-    """
+    """Temperature FB100 actor."""
 
     def __init__(
         self,
         state_manager: StateManager,
-        adapter: Optional[IFb100Adapter] = None,
+        controller: Optional[FB100] = None,
+        transport: Optional[Any] = None,
     ) -> None:
         self._state_manager = state_manager
-        self._adapter: IFb100Adapter = adapter or MockFb100Adapter()
+        self._controller = controller or FB100()
+        self._transport = transport
         self._scheduler = CommandScheduler()
 
-        # Worker thread
         self._worker_thread: Optional[threading.Thread] = None
         self._shutdown_event = threading.Event()
 
-        # Polling thread
         self._polling_thread: Optional[threading.Thread] = None
         self._polling_stop_event = threading.Event()
         self._polling_interval_sec: float = 1.0
         self._polling_device_id: Optional[str] = None
         self._polling_active = False
-
-        # polling_queue에 command가 들어있는지 추적 (중복 방지)
         self._poll_pending = threading.Event()
 
-    # ── lifecycle ─────────────────────────────────────────────────────────────
+        self._connected = False
+        self._connection_config: Optional[dict[str, Any]] = None
 
     def start(self) -> None:
         self._shutdown_event.clear()
@@ -233,21 +69,20 @@ class TemperatureActor:
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.join(timeout=5.0)
+        try:
+            if self._transport is not None:
+                self._transport.close()
+        except Exception:
+            logger.debug("[TemperatureActor] transport close failed", exc_info=True)
         logger.info("[TemperatureActor] stopped")
 
-    # ── submit ────────────────────────────────────────────────────────────────
-
     def submit(self, command: DeviceCommand) -> Optional[Future]:
-        """command를 적절한 queue에 넣고, WAIT 모드면 Future를 반환한다."""
         future: Optional[Future] = None
         if command.response_mode == ResponseMode.WAIT:
             future = Future()
             command.result_future = future
-
         self._scheduler.enqueue(command)
         return future
-
-    # ── polling ───────────────────────────────────────────────────────────────
 
     def start_polling(self, device_id: str, interval_sec: float = 1.0) -> None:
         if self._polling_active:
@@ -287,15 +122,12 @@ class TemperatureActor:
             )
         logger.info("[TemperatureActor] polling stopped")
 
-    # ── worker loop ───────────────────────────────────────────────────────────
-
     def _worker_loop(self) -> None:
         while not self._shutdown_event.is_set():
             command = self._scheduler.dequeue()
             if command is not None:
                 self._execute_command(command)
             else:
-                # 할 일 없으면 20ms 대기 후 재확인
                 self._shutdown_event.wait(0.02)
 
     def _execute_command(self, command: DeviceCommand) -> None:
@@ -312,141 +144,134 @@ class TemperatureActor:
                 error=str(exc),
             )
 
-        # StateManager 업데이트 (ok인 경우만)
         if result.ok and result.data:
             self._state_manager.update_temperature_state(
                 command.device_id,
-                {**result.data, "lastCommandId": command.command_id},
+                {**result.data, "error": None, "lastCommandId": command.command_id},
+            )
+        elif not result.ok and result.error:
+            self._state_manager.update_temperature_state(
+                command.device_id,
+                {"error": result.error, "lastCommandId": command.command_id},
             )
 
-        # polling pending 플래그 해제
         if command.queue_type == CommandQueueType.POLLING:
             self._poll_pending.clear()
 
-        # Future 완료 처리
         if command.result_future is not None and not command.result_future.done():
-            if result.ok:
-                command.result_future.set_result(result)
-            else:
-                command.result_future.set_exception(
-                    RuntimeError(result.error or "command failed")
-                )
+            command.result_future.set_result(result)
 
     def _dispatch(self, command: DeviceCommand) -> CommandResult:
-        action = command.action
-        if action == "probe":
-            return self._handle_probe(command)
-        elif action == "connect":
-            return self._handle_connect(command)
-        elif action == "disconnect":
-            return self._handle_disconnect(command)
-        # read_status: 신규 명칭. read_current: deprecated alias (동일 동작)
-        elif action in ("read_status", "read_current"):
-            return self._handle_read_status(command)
-        else:
+        if self._transport is None:
             return CommandResult(
                 command_id=command.command_id,
                 ok=False,
                 device_id=command.device_id,
-                error=f"unknown action: {action}",
+                error="Temperature transport is not configured",
             )
 
-    # ── command handlers ──────────────────────────────────────────────────────
-
-    def _handle_probe(self, command: DeviceCommand) -> CommandResult:
-        port = command.payload.get("port", "")
-        ok = self._adapter.probe(port=port)
+        action = command.action
+        if action == "probe":
+            return self._run_probe(command)
+        if action == "connect":
+            return self._run_connect(command)
+        if action == "disconnect":
+            return self._run_disconnect(command)
+        if action == "read_status":
+            return self._run_read_status(command)
         return CommandResult(
             command_id=command.command_id,
-            ok=ok,
+            ok=False,
             device_id=command.device_id,
-            data={"probed": ok},
-            error=None if ok else "probe failed",
+            error=f"unknown action: {action}",
         )
 
-    def _handle_connect(self, command: DeviceCommand) -> CommandResult:
-        p = command.payload
-        port = p.get("port", "")
-        baudrate = int(p.get("baudrate") or 9600)
-        timeout_ms = int((p.get("timeoutSec") or 1.0) * 1000)
-        model = p.get("model") or "FB100"
+    def _run_probe(self, command: DeviceCommand) -> CommandResult:
+        config = self._transport_config(command)
+        responses: list[TransportResponse] = []
+        try:
+            self._transport.open(config)
+            responses = self._run_transactions(command)
+        finally:
+            self._transport.close()
+            if self._connected and self._connection_config is not None:
+                self._transport.open(self._connection_config)
+        return self._controller.parse_result(command, responses)
 
-        ok = self._adapter.connect(
-            port=port, baudrate=baudrate, timeout_ms=timeout_ms, model=model
-        )
-        # 연결 성공 시 폴링 자동 시작 (Tkinter: connect→자동 폴링, 사용자 start 버튼 없음)
-        if ok:
+    def _run_connect(self, command: DeviceCommand) -> CommandResult:
+        config = self._transport_config(command)
+        self._transport.open(config)
+        responses = self._run_transactions(command)
+        result = self._controller.parse_result(command, responses)
+        if result.ok:
+            self._connected = True
+            self._connection_config = config
             self.start_polling(
                 device_id=command.device_id,
                 interval_sec=self._polling_interval_sec,
             )
-        return CommandResult(
-            command_id=command.command_id,
-            ok=ok,
-            device_id=command.device_id,
-            data={"connected": ok, "model": model, "polling": ok} if ok else {},
-            error=None if ok else "connect failed",
-        )
+        else:
+            self._connected = False
+            self._connection_config = None
+            self._transport.close()
+        return result
 
-    def _handle_disconnect(self, command: DeviceCommand) -> CommandResult:
-        # polling 먼저 중지 (worker 내에서 호출되므로 join 빠름)
+    def _run_disconnect(self, command: DeviceCommand) -> CommandResult:
         if self._polling_active:
             self.stop_polling()
+        responses = self._run_transactions(command)
+        result = self._controller.parse_result(command, responses)
+        self._connected = False
+        self._connection_config = None
+        self._transport.close()
+        return result
 
-        ok = self._adapter.disconnect()
-        return CommandResult(
-            command_id=command.command_id,
-            ok=ok,
-            device_id=command.device_id,
-            data={"connected": False, "polling": False},
-            error=None if ok else "disconnect failed",
-        )
-
-    def _handle_read_status(self, command: DeviceCommand) -> CommandResult:
-        if not self._adapter.is_connected():
+    def _run_read_status(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
             return CommandResult(
                 command_id=command.command_id,
                 ok=False,
                 device_id=command.device_id,
-                data={},
                 error="Temperature device is not connected",
             )
-        data = self._adapter.read_dashboard_values()
-        data["connected"] = True
-        return CommandResult(
-            command_id=command.command_id,
-            ok=True,
-            device_id=command.device_id,
-            data=data,
-        )
+        responses = self._run_transactions(command)
+        return self._controller.parse_result(command, responses)
 
-    # ── polling loop ──────────────────────────────────────────────────────────
+    def _run_transactions(self, command: DeviceCommand) -> list[TransportResponse]:
+        transactions = self._controller.build_transactions(command)
+        return [self._transport.transaction(tx) for tx in transactions]
+
+    @staticmethod
+    def _transport_config(command: DeviceCommand) -> dict[str, Any]:
+        payload = command.payload
+        return {
+            "port": payload.get("port", ""),
+            "baudrate": int(payload.get("baudrate") or 9600),
+            "bytesize": int(payload.get("bytesize") or 8),
+            "parity": payload.get("parity") or "N",
+            "stopbits": float(payload.get("stopbits") or 1.0),
+            "timeoutMs": int((payload.get("timeoutSec") or 1.0) * 1000),
+        }
 
     def _polling_loop(self) -> None:
-        """drift-free tick 방식으로 polling_queue에 read_status command를 넣는다.
-
-        controller를 직접 호출하지 않는다 — 반드시 queue를 통한다.
-        """
         device_id = self._polling_device_id
         interval_sec = self._polling_interval_sec
         next_tick = time.monotonic()
 
         while not self._polling_stop_event.is_set():
             next_tick += interval_sec
-
-            # pending polling command가 없을 때만 새로 추가 (중복 방지)
             if not self._poll_pending.is_set():
                 self._poll_pending.set()
-                poll_cmd = DeviceCommand(
-                    device_id=device_id,
-                    device_type="temperature",
-                    queue_type=CommandQueueType.POLLING,
-                    action="read_status",
-                    payload={},
-                    response_mode=ResponseMode.NONE,
-                    context={"origin": "polling_loop"},
+                self._scheduler.enqueue(
+                    DeviceCommand(
+                        device_id=device_id,
+                        device_type="temperature",
+                        queue_type=CommandQueueType.POLLING,
+                        action="read_status",
+                        payload={},
+                        response_mode=ResponseMode.NONE,
+                        context={"origin": "polling_loop"},
+                    )
                 )
-                self._scheduler.enqueue(poll_cmd)
-
             sleep_sec = max(0.0, next_tick - time.monotonic())
             self._polling_stop_event.wait(sleep_sec)

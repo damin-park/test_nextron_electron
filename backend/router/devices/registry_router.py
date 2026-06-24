@@ -19,12 +19,10 @@ init-connect 팝업에서 사용하는 장비 등록/조회 endpoint.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from backend.managers.device_registry import DeviceRegistryManager
-from backend.managers.temperature_service import (
-    TemperatureService as TemperatureManager,
-)
+from backend.managers.device_mode import get_device_mode
 from backend.schemas.device import (
     RegisterDeviceRequest,
     RegisteredDevice,
@@ -34,8 +32,13 @@ from backend.schemas.device import (
     TemperatureReading,
     TemperatureStatus,
 )
+from backend.schemas.temperature import (
+    TemperatureConnectRequest as CommandTemperatureConnectRequest,
+)
+from backend.services.temperature_service import TemperatureService
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
+DEFAULT_TEMPERATURE_DEVICE_ID = "temperature-1"
 
 
 # ── Device registry ───────────────────────────────────────────────────────────
@@ -102,33 +105,70 @@ def get_device_state(device_id: str) -> dict:
 
 
 @router.get("/temperature/status", response_model=TemperatureStatus)
-async def temperature_status() -> TemperatureStatus:
-    svc = TemperatureManager.instance()
-    return await svc.status()
+async def temperature_status(request: Request) -> TemperatureStatus:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.get_state(DEFAULT_TEMPERATURE_DEVICE_ID)
+    data = result.data if result.ok else {}
+    connected = bool(data.get("connected"))
+    reading = None
+    if connected:
+        reading = TemperatureReading(
+            connected=True,
+            currentTemperature=data.get("currentTemperature"),
+            setpoint=data.get("targetSetpoint") or data.get("sv"),
+            unit=str(data.get("unit") or "C"),
+        )
+    return TemperatureStatus(
+        mode=get_device_mode(),
+        connected=connected,
+        port=None,
+        model=data.get("model"),
+        reading=reading,
+    )
 
 
 @router.post("/temperature/probe")
-async def temperature_probe(request: TemperatureProbeRequest) -> dict:
-    svc = TemperatureManager.instance()
-    ok = await svc.probe(request)
-    return {"ok": ok}
+async def temperature_probe(body: TemperatureProbeRequest, request: Request) -> dict:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.probe(
+        device_id=DEFAULT_TEMPERATURE_DEVICE_ID,
+        port=body.connection.port,
+        baudrate=body.connection.baudrate,
+        timeout_sec=body.connection.timeoutMs / 1000.0,
+    )
+    return {"ok": result.ok}
 
 
 @router.post("/temperature/connect")
-async def temperature_connect(request: TemperatureConnectRequest) -> dict:
-    svc = TemperatureManager.instance()
-    ok = await svc.connect(request.connection, request.model)
-    return {"ok": ok}
+async def temperature_connect(body: TemperatureConnectRequest, request: Request) -> dict:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.connect(
+        DEFAULT_TEMPERATURE_DEVICE_ID,
+        CommandTemperatureConnectRequest(
+            port=body.connection.port,
+            baudrate=body.connection.baudrate,
+            timeoutSec=body.connection.timeoutMs / 1000.0,
+            model=body.model,
+        ),
+    )
+    return {"ok": result.ok}
 
 
 @router.post("/temperature/disconnect")
-async def temperature_disconnect() -> dict:
-    svc = TemperatureManager.instance()
-    ok = await svc.disconnect()
-    return {"ok": ok}
+async def temperature_disconnect(request: Request) -> dict:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.disconnect(DEFAULT_TEMPERATURE_DEVICE_ID)
+    return {"ok": result.ok}
 
 
 @router.get("/temperature/read", response_model=TemperatureReading)
-async def temperature_read() -> TemperatureReading:
-    svc = TemperatureManager.instance()
-    return await svc.read()
+async def temperature_read(request: Request) -> TemperatureReading:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.read_status(DEFAULT_TEMPERATURE_DEVICE_ID)
+    data = result.data if result.ok else {}
+    return TemperatureReading(
+        connected=bool(data.get("connected")),
+        currentTemperature=data.get("currentTemperature"),
+        setpoint=data.get("targetSetpoint") or data.get("sv"),
+        unit=str(data.get("unit") or "C"),
+    )

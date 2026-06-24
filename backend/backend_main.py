@@ -33,17 +33,24 @@ async def lifespan(app: FastAPI):
     telemetry_broadcaster.bind_loop(asyncio.get_running_loop())
     state_manager.add_listener(telemetry_broadcaster.publish_snapshot)
 
-    # TemperatureActor — NEXTRON_DEVICE_MODE=real 이면 RealFb100Adapter 사용
+    # TemperatureActor — NEXTRON_DEVICE_MODE=real 이면 SerialTransport 사용
     mode = get_device_mode()
     if mode == DeviceMode.REAL:
-        from backend.actors.temperature_actor import RealFb100Adapter
-        adapter = RealFb100Adapter()
-    else:
-        from backend.actors.temperature_actor import MockFb100Adapter
-        adapter = MockFb100Adapter()
+        from backend.transports.serial_transport import SerialTransport
 
+        transport = SerialTransport()
+    else:
+        from backend.transports.mock_transport import MockTransport
+
+        transport = MockTransport()
+
+    from backend.controllers.temperature.fb100 import FB100
     from backend.actors.temperature_actor import TemperatureActor
-    temperature_actor = TemperatureActor(state_manager=state_manager, adapter=adapter)
+    temperature_actor = TemperatureActor(
+        state_manager=state_manager,
+        controller=FB100(),
+        transport=transport,
+    )
     temperature_actor.start()
 
     # app.state에 long-lived 인스턴스 등록

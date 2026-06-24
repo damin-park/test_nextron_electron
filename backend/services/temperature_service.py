@@ -65,13 +65,23 @@ class TemperatureService:
 
     # ── probe ─────────────────────────────────────────────────────────────────
 
-    async def probe(self, device_id: str, port: str = "") -> CommandResult:
+    async def probe(
+        self,
+        device_id: str,
+        port: str = "",
+        baudrate: int = 9600,
+        timeout_sec: float = 1.0,
+    ) -> CommandResult:
         command = DeviceCommand(
             device_id=device_id,
             device_type="temperature",
             queue_type=CommandQueueType.CONNECTION,
             action="probe",
-            payload={"port": port},
+            payload={
+                "port": port,
+                "baudrate": baudrate,
+                "timeoutSec": timeout_sec,
+            },
             response_mode=ResponseMode.WAIT,
             context={"origin": "gui"},
         )
@@ -131,10 +141,6 @@ class TemperatureService:
         )
         future = self._actor.submit(command)
         return await self._await(future, command.command_id, device_id, command.timeout_sec)
-
-    async def read_current(self, device_id: str) -> CommandResult:
-        """Deprecated: read_status 로 위임. 신규 코드는 read_status 사용."""
-        return await self.read_status(device_id=device_id)
 
     # ── write setpoint (mock 유지, 다음 단계에서 Actor 연동) ─────────────────
 
