@@ -55,11 +55,19 @@ class FB100:
             if action == "connect":
                 ok = "FB100" in self._response_payload(responses, "ID")
                 model = command.payload.get("model") or "FB100"
+                port = command.payload.get("port")
+                resource = command.payload.get("resource") or port
                 return CommandResult(
                     command_id=command.command_id,
                     ok=ok,
                     device_id=command.device_id,
-                    data={"connected": ok, "model": model, "polling": ok}
+                    data={
+                        "connected": ok,
+                        "model": model,
+                        "polling": ok,
+                        "port": port,
+                        "resource": resource,
+                    }
                     if ok
                     else {},
                     error=None if ok else "connect failed",
@@ -70,7 +78,12 @@ class FB100:
                     command_id=command.command_id,
                     ok=True,
                     device_id=command.device_id,
-                    data={"connected": False, "polling": False},
+                    data={
+                        "connected": False,
+                        "polling": False,
+                        "port": None,
+                        "resource": None,
+                    },
                 )
 
             if action == "read_status":

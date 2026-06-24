@@ -80,6 +80,7 @@ export function ConnectionSettings(): ReactElement {
 
   const isBusy = actionState !== 'idle';
   const connected = state?.connected;
+  const connectionControlsDisabled = isBusy || connected === true;
   const { text: statusText, color: statusColor } = statusDisplay(
     connected,
     actionState,
@@ -124,7 +125,7 @@ export function ConnectionSettings(): ReactElement {
                   className="conn-settings__select"
                   value={port}
                   onChange={(e) => setPort(e.target.value)}
-                  disabled={isBusy}
+                  disabled={connectionControlsDisabled}
                 >
                   {ports.length === 0 && (
                     <option value="">No ports found</option>
@@ -141,7 +142,7 @@ export function ConnectionSettings(): ReactElement {
                   type="button"
                   className="conn-settings__btn"
                   onClick={() => void refreshPorts()}
-                  disabled={portsLoading || isBusy}
+                  disabled={portsLoading || connectionControlsDisabled}
                 >
                   {portsLoading ? '...' : 'Refresh'}
                 </button>
@@ -158,7 +159,7 @@ export function ConnectionSettings(): ReactElement {
                 className="conn-settings__select"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                disabled={isBusy}
+                disabled={connectionControlsDisabled}
               >
                 {TEMPERATURE_MODELS.map((m) => (
                   <option key={m} value={m}>
@@ -174,7 +175,7 @@ export function ConnectionSettings(): ReactElement {
             <button
               type="button"
               className="conn-settings__btn conn-settings__btn--ghost"
-              disabled={isBusy}
+              disabled={connectionControlsDisabled}
               onClick={() => void probe()}
             >
               Find Device

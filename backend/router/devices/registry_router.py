@@ -121,7 +121,7 @@ async def temperature_status(request: Request) -> TemperatureStatus:
     return TemperatureStatus(
         mode=get_device_mode(),
         connected=connected,
-        port=None,
+        port=data.get("port") or data.get("resource"),
         model=data.get("model"),
         reading=reading,
     )
