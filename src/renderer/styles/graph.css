@@ -1,0 +1,784 @@
+/* ─────────────────────────────────────────
+   Graph Panel
+   Tkinter graph_panel.py 의 헤더/버튼 구조를 CSS로 재현
+   ───────────────────────────────────────── */
+
+/*
+ * theme.css 는 --md3-* 변수명을 사용한다.
+ * 아래 alias 로 graph 영역에서 짧은 이름을 쓸 수 있게 매핑한다.
+ * (CSS custom property 는 상속되므로 .graph-panel / .gs-overlay 하위 전체에 적용된다)
+ */
+.graph-panel,
+.gs-overlay {
+  --surface: var(--md3-surface);
+  --container: var(--md3-surface-container);
+  --container-low: var(--md3-surface-container-low);
+  --container-high: var(--md3-surface-container-high);
+  --on-surface: var(--md3-on-surface);
+  --on-surface-variant: var(--md3-on-surface-variant);
+  --outline: var(--md3-outline);
+  --outline-variant: var(--md3-outline-variant);
+  --text-disabled: var(--md3-text-disabled);
+}
+
+.graph-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-family: Roboto, sans-serif;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.graph-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 4px 8px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--outline-variant);
+  min-height: 38px;
+  flex-shrink: 0;
+}
+
+/* Left icon button group (Tkinter: btn_frame, side=LEFT) */
+.graph-panel__icon-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+/* Canvas-style icon button (Tkinter: 28×28 Canvas buttons) */
+.graph-panel__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.graph-panel__icon-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.graph-panel__icon-btn:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* Active mode indicator (Tkinter: edit/delete mode highlighted) */
+.graph-panel__icon-btn--active {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.graph-panel__icon-glyph {
+  font-size: 20px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Mode hint text (Tkinter: #FFC857 gold, side=LEFT padx=60) */
+.graph-panel__mode-hint {
+  font-size: 13px;
+  color: #FFC857;
+  padding-left: 24px;
+  white-space: nowrap;
+  font-family: 'Roboto Medium', Roboto, sans-serif;
+}
+
+/* Spacer pushes right items to the right */
+.graph-panel__header-spacer {
+  flex: 1;
+}
+
+/* Data point count (right side) */
+.graph-panel__meta {
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  padding-right: 8px;
+  white-space: nowrap;
+}
+
+/* Text button (Reset Zoom etc.) */
+.graph-panel__text-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 4px;
+  background-color: var(--container-low);
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
+.graph-panel__text-btn:hover:not(:disabled) {
+  background-color: var(--container);
+}
+
+.graph-panel__text-btn:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* ── Tile Grid ── */
+.graph-panel__tiles {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.graph-panel__tiles--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tkinter LAYOUT_PRESETS mirrored as CSS grid */
+.graph-panel__tiles--1x1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.graph-panel__tiles--1x2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.graph-panel__tiles--2x2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.graph-panel__tiles--2x3 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+/* Empty state */
+.graph-panel__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.graph-panel__empty-state p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ─────────────────────────────────────────
+   Graph Tile
+   Tkinter _GraphTile: matplotlib canvas, overlay buttons
+   ───────────────────────────────────────── */
+
+.graph-tile {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--container);
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Hover feedback when edit/delete mode is active */
+.graph-tile--selectable:hover {
+  border-color: #FFC857;
+  cursor: pointer;
+}
+
+.graph-tile__header {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px 4px;
+  background-color: var(--container-low);
+  border-bottom: 1px solid var(--outline-variant);
+  flex-shrink: 0;
+}
+
+.graph-tile__title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.graph-tile__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--on-surface);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-tile__unit {
+  font-size: 10px;
+  color: var(--on-surface-variant);
+  margin-top: 1px;
+}
+
+.graph-tile__buttons {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.graph-tile__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 14px;
+  background: none;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.graph-tile__button:hover {
+  background-color: rgba(224, 224, 224, 0.1);
+  color: var(--on-surface);
+}
+
+.graph-tile__button--delete:hover {
+  background-color: rgba(210, 0, 0, 0.2);
+  color: #D20000;
+}
+
+.graph-tile__plot {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─────────────────────────────────────────
+   Graph Setting Dialog
+   Tkinter graph_setting.py:
+     - 두 컬럼 패널 (X-Axis/Data List | Y-Axis/Plots)
+     - Apply / Close 버튼 하단
+   ───────────────────────────────────────── */
+
+.gs-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.gs-dialog {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--container);
+  border: 1px solid var(--outline);
+  border-radius: 6px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.85);
+  width: 940px;
+  height: 600px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.gs-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--container);
+  border-bottom: 1px solid var(--outline-variant);
+  flex-shrink: 0;
+}
+
+.gs-dialog__title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.gs-dialog__close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: background-color 100ms ease;
+}
+
+.gs-dialog__close-btn:hover {
+  background-color: rgba(224, 224, 224, 0.1);
+  color: var(--on-surface);
+}
+
+/* ── Body: preview column | settings column ── */
+.gs-dialog__body {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 360px;
+}
+
+/* Preview column (left) */
+.gs-preview-col {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  flex-shrink: 0;
+  padding: 12px 14px;
+  border-right: 1px solid var(--outline-variant);
+  background-color: var(--container-low);
+}
+
+.gs-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.gs-preview {
+  flex: 1;
+  min-height: 280px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 4px;
+  background-color: #1e1e1e;
+  overflow: hidden;
+  position: relative;
+}
+
+.gs-preview__host {
+  width: 100%;
+  height: 100%;
+}
+
+.gs-preview__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-disabled);
+  font-style: italic;
+  text-align: center;
+  padding: 0 16px;
+}
+
+/* Settings column (right) */
+.gs-settings-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Top row: X-Axis | Y-Axis */
+.gs-dialog__top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.gs-axis-panel {
+  padding: 10px 14px;
+}
+
+.gs-axis-panel:first-child {
+  border-right: 1px solid var(--outline-variant);
+}
+
+.gs-axis-panel__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+.gs-axis-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gs-label {
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+  min-width: 64px;
+}
+
+.gs-select {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+  background-color: var(--container-low);
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  color: var(--on-surface);
+  cursor: pointer;
+  font-family: Roboto, sans-serif;
+}
+
+.gs-select:focus {
+  outline: none;
+  border-color: var(--on-surface-variant);
+}
+
+.gs-readonly-value {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  color: var(--on-surface-variant);
+}
+
+/* Mid row: Data List | Plots */
+.gs-dialog__mid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 240px;
+}
+
+.gs-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  overflow: hidden;
+}
+
+.gs-panel:first-child {
+  border-right: 1px solid var(--outline-variant);
+}
+
+.gs-panel__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.gs-panel__main {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Listbox container */
+.gs-listbox-wrap {
+  flex: 1;
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  overflow-y: auto;
+  background-color: var(--container-low);
+  min-width: 0;
+}
+
+.gs-listbox {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0;
+}
+
+.gs-listbox__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--on-surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 80ms ease;
+}
+
+.gs-listbox__item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.gs-listbox__item--selected {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.gs-listbox__empty {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-disabled);
+  font-style: italic;
+}
+
+/* Color dot */
+.gs-series-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Vertical button group beside listbox (Tkinter: Add / Remove / Clear) */
+.gs-panel__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: flex-start;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.gs-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  background-color: var(--container);
+  color: var(--on-surface);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 80ms ease;
+  text-align: center;
+}
+
+.gs-btn:hover:not(:disabled) {
+  background-color: var(--container-high, #242424);
+  border-color: var(--outline);
+}
+
+.gs-btn:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Line style section (right panel bottom area) */
+.gs-style-section {
+  flex-shrink: 0;
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  padding: 8px;
+  background-color: var(--container-low);
+  min-width: 132px;
+  width: 132px;
+}
+
+.gs-style-section__title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* Plot line-style controls */
+.gs-style-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gs-style-controls__name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--on-surface);
+  word-break: break-all;
+  margin-bottom: 2px;
+}
+
+.gs-style-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gs-style-field__label {
+  font-size: 10px;
+  color: var(--on-surface-variant);
+}
+
+.gs-style-select {
+  padding: 4px 6px;
+  font-size: 11px;
+  background-color: var(--container);
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  color: var(--on-surface);
+  cursor: pointer;
+  font-family: Roboto, sans-serif;
+}
+
+.gs-style-select:focus {
+  outline: none;
+  border-color: var(--on-surface-variant);
+}
+
+.gs-color-wrap {
+  position: relative;
+}
+
+.gs-color-swatch {
+  width: 40px;
+  height: 22px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 0;
+}
+
+.gs-color-swatch:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Color palette popup (5 cols x 4 rows) */
+.gs-color-palette {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background-color: var(--container-high, #242424);
+  border: 1px solid var(--outline);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.gs-color-cell {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 80ms ease;
+}
+
+.gs-color-cell:hover {
+  transform: scale(1.15);
+}
+
+.gs-color-cell--active {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+.gs-style-hint {
+  font-size: 10px;
+  color: var(--text-disabled);
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── Footer ── */
+.gs-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: var(--container);
+  border-top: 1px solid var(--outline-variant);
+  flex-shrink: 0;
+}
+
+.gs-dialog__error {
+  font-size: 11px;
+  color: #D20000;
+  margin-right: auto;
+}
+
+.gs-dialog__footer-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Tkinter style: Apply / Close, 120×35, centered */
+.gs-footer-btn {
+  padding: 7px 28px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  font-family: Roboto, sans-serif;
+  transition: background-color 100ms ease;
+}
+
+.gs-footer-btn--cancel {
+  background-color: var(--container-low);
+  color: var(--on-surface);
+}
+
+.gs-footer-btn--cancel:hover {
+  background-color: var(--container);
+}
+
+.gs-footer-btn--apply {
+  background-color: var(--on-surface-variant);
+  color: var(--surface);
+  border-color: var(--on-surface-variant);
+}
+
+.gs-footer-btn--apply:hover:not(:disabled) {
+  background-color: var(--on-surface);
+  border-color: var(--on-surface);
+}
+
+.gs-footer-btn--apply:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+

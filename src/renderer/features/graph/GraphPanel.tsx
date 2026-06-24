@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -8,13 +7,22 @@ import {
 } from 'react';
 import type { TemperatureDeviceState } from '../../services/deviceTypes';
 import {
-  DEFAULT_VISIBLE_GRAPH_SERIES,
   GRAPH_SERIES_BY_KEY,
-  TEMPERATURE_GRAPH_SERIES,
 } from './graphSeriesCatalog';
-import type { GraphSeriesKey } from './graphTypes';
+import type {
+  GraphLayoutConfig,
+  GraphTileConfig,
+} from './graphTypes';
+import { DEFAULT_GRAPH_LAYOUT } from './graphTypes';
 import { UPlotGraphTile } from './UPlotGraphTile';
 import { useGraphHistory } from './useGraphHistory';
+import { GraphSettingDialog } from './GraphSettingDialog';
+import {
+  loadGraphLayout,
+  saveGraphLayout,
+} from './graphLayoutPersistence';
+import { getLayoutGridClass } from './graphUtils';
+import { getIconGlyph } from '../../shared/icons/materialSymbols';
 
 interface GraphPanelProps {
   temperatureState: TemperatureDeviceState | null;
@@ -25,64 +33,78 @@ interface XRange {
   max: number | null;
 }
 
+type EditMode = 'none' | 'edit' | 'delete';
+type DialogMode = 'closed' | 'add' | 'edit';
+
 export function GraphPanel({ temperatureState }: GraphPanelProps): ReactElement {
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-  const [panelWidth, setPanelWidth] = useState(1000);
-  const [visibleSeries, setVisibleSeries] = useState<GraphSeriesKey[]>(
-    DEFAULT_VISIBLE_GRAPH_SERIES,
+  const graphHistory = useGraphHistory(temperatureState);
+  const [layout, setLayout] = useState<GraphLayoutConfig>(() => {
+    const loaded = loadGraphLayout();
+    return loaded ?? DEFAULT_GRAPH_LAYOUT;
+  });
+  const [editMode, setEditMode] = useState<EditMode>('none');
+  const [dialogMode, setDialogMode] = useState<DialogMode>('closed');
+  const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(
+    null,
   );
   const [manualXRange, setManualXRange] = useState<XRange | null>(null);
-  const graphHistory = useGraphHistory(temperatureState);
 
+  // Save layout whenever it changes
   useLayoutEffect(() => {
-    const body = bodyRef.current;
-    if (body == null) return undefined;
+    saveGraphLayout(layout);
+  }, [layout]);
 
-    const updateWidth = (): void => {
-      const rect = body.getBoundingClientRect();
-      setPanelWidth(Math.max(1, Math.floor(rect.width)));
-    };
+  const handleAddGraph = (): void => {
+    if (layout.tiles.length >= 6) {
+      alert('최대 6개까지만 추가할 수 있습니다.');
+      return;
+    }
+    setSelectedTileIndex(null);
+    setDialogMode('add');
+  };
 
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(body);
+  const handleEditClick = (index: number): void => {
+    if (editMode === 'edit') {
+      setSelectedTileIndex(index);
+      setDialogMode('edit');
+    }
+  };
 
-    return () => observer.disconnect();
-  }, []);
+  const handleDeleteClick = (index: number): void => {
+    if (editMode === 'delete') {
+      setLayout((current) => ({
+        ...current,
+        tiles: current.tiles.filter((_, i) => i !== index),
+      }));
+      setEditMode('none');
+    }
+  };
 
-  const temperatureVisibleSeries = useMemo(
-    () =>
-      TEMPERATURE_GRAPH_SERIES.filter((series) =>
-        visibleSeries.includes(series.key),
-      ),
-    [visibleSeries],
-  );
-
-  const displayRange = manualXRange ?? graphHistory.xRange;
-  const displayData = useMemo(
-    () =>
-      graphHistory.getDisplayData(
-        temperatureVisibleSeries.map((series) => series.key),
-        displayRange.min,
-        displayRange.max,
-        panelWidth,
-      ),
-    [
-      displayRange.max,
-      displayRange.min,
-      graphHistory,
-      panelWidth,
-      temperatureVisibleSeries,
-    ],
-  );
-
-  const toggleSeries = (seriesKey: GraphSeriesKey): void => {
-    setVisibleSeries((current) => {
-      if (current.includes(seriesKey)) {
-        return current.filter((key) => key !== seriesKey);
+  const handleSaveGraphConfig = (config: GraphTileConfig): void => {
+    setLayout((current) => {
+      if (selectedTileIndex !== null) {
+        // Edit mode
+        const newTiles = [...current.tiles];
+        newTiles[selectedTileIndex] = {
+          ...newTiles[selectedTileIndex],
+          ...config,
+        };
+        return { ...current, tiles: newTiles };
+      } else {
+        // Add mode
+        return {
+          ...current,
+          tiles: [...current.tiles, config],
+        };
       }
-      return [...current, seriesKey];
     });
+    setDialogMode('closed');
+    setSelectedTileIndex(null);
+  };
+
+  const handleDialogClose = (): void => {
+    setDialogMode('closed');
+    setSelectedTileIndex(null);
   };
 
   const clearHistory = (): void => {
@@ -90,65 +112,215 @@ export function GraphPanel({ temperatureState }: GraphPanelProps): ReactElement 
     setManualXRange(null);
   };
 
-  const handleXRangeChange = useCallback((min: number, max: number): void => {
-    setManualXRange({ min, max });
-  }, []);
-
   const resetXRange = (): void => {
     setManualXRange(null);
+  };
+
+  const toggleEditMode = (): void => {
+    setEditMode((current) => (current === 'edit' ? 'none' : 'edit'));
+  };
+
+  const toggleDeleteMode = (): void => {
+    setEditMode((current) => (current === 'delete' ? 'none' : 'delete'));
   };
 
   return (
     <div className="graph-panel">
       <header className="graph-panel__header">
-        <div className="graph-panel__title">Graph Panel</div>
-        <div className="graph-panel__meta">
-          {graphHistory.pointCount.toLocaleString()} pts
+        {/* Left: icon buttons (Tkinter style: add, delete, edit, replay) */}
+        <div className="graph-panel__icon-buttons">
+          <button
+            type="button"
+            className="graph-panel__icon-btn"
+            title="Add Graph"
+            onClick={handleAddGraph}
+            disabled={layout.tiles.length >= 6}
+          >
+            <span className="material-symbols-outlined graph-panel__icon-glyph">
+              {getIconGlyph('add')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`graph-panel__icon-btn${editMode === 'delete' ? ' graph-panel__icon-btn--active' : ''}`}
+            title="Delete Graph"
+            onClick={toggleDeleteMode}
+            disabled={layout.tiles.length === 0}
+          >
+            <span className="material-symbols-outlined graph-panel__icon-glyph">
+              {getIconGlyph('delete')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`graph-panel__icon-btn${editMode === 'edit' ? ' graph-panel__icon-btn--active' : ''}`}
+            title="Edit Graph"
+            onClick={toggleEditMode}
+            disabled={layout.tiles.length === 0}
+          >
+            <span className="material-symbols-outlined graph-panel__icon-glyph">
+              {getIconGlyph('edit')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="graph-panel__icon-btn"
+            title="Clear History"
+            onClick={clearHistory}
+            disabled={graphHistory.pointCount === 0}
+          >
+            <span className="material-symbols-outlined graph-panel__icon-glyph">
+              {getIconGlyph('replay')}
+            </span>
+          </button>
         </div>
+
+        {/* Mode hint (Tkinter: FFC857 gold text, left-padded) */}
+        {editMode !== 'none' && (
+          <span className="graph-panel__mode-hint">
+            {editMode === 'edit' ? 'Click a graph to edit' : 'Click a graph to delete'}
+          </span>
+        )}
+
+        {/* Spacer */}
+        <div className="graph-panel__header-spacer" />
+
+        {/* Right: data info + zoom reset */}
+        <span className="graph-panel__meta">
+          {graphHistory.pointCount.toLocaleString()} pts
+        </span>
         <button
           type="button"
-          className="graph-panel__button"
+          className="graph-panel__text-btn"
           onClick={resetXRange}
           disabled={manualXRange == null}
         >
           Reset Zoom
         </button>
-        <button
-          type="button"
-          className="graph-panel__button graph-panel__button--danger"
-          onClick={clearHistory}
-          disabled={graphHistory.pointCount === 0}
-        >
-          Clear
-        </button>
       </header>
 
-      <div className="graph-panel__controls">
-        {TEMPERATURE_GRAPH_SERIES.map((series) => (
-          <label key={series.key} className="graph-panel__series-toggle">
-            <input
-              type="checkbox"
-              checked={visibleSeries.includes(series.key)}
-              onChange={() => toggleSeries(series.key)}
+      <div className={`graph-panel__tiles ${getLayoutGridClass(layout.tiles.length)}`}>
+        {layout.tiles.length === 0 ? (
+          <div className="graph-panel__empty-state">
+            <span className="material-symbols-outlined" style={{ fontSize: 40, color: '#444' }}>
+              {getIconGlyph('add')}
+            </span>
+            <p>그래프가 없습니다.</p>
+            <p>+ 버튼을 클릭하여 그래프를 추가하세요.</p>
+          </div>
+        ) : (
+          layout.tiles.map((tileConfig, index) => (
+            <GraphTileWrapper
+              key={tileConfig.id}
+              config={tileConfig}
+              graphHistory={graphHistory}
+              manualXRange={manualXRange}
+              onXRangeChange={(min, max) => setManualXRange({ min, max })}
+              onEdit={() => handleEditClick(index)}
+              onDelete={() => handleDeleteClick(index)}
+              editMode={editMode}
             />
-            <span
-              className="graph-panel__series-swatch"
-              style={{ backgroundColor: series.color }}
-            />
-            <span>{GRAPH_SERIES_BY_KEY[series.key].label}</span>
-          </label>
-        ))}
+          ))
+        )}
       </div>
 
-      <div className="graph-panel__body" ref={bodyRef}>
-        <UPlotGraphTile
-          title="Temperature"
-          unitLabel="Temperature [°C]"
-          series={temperatureVisibleSeries}
-          data={displayData}
-          onXRangeChange={handleXRangeChange}
+      {dialogMode !== 'closed' && (
+        <GraphSettingDialog
+          initialConfig={
+            selectedTileIndex !== null
+              ? layout.tiles[selectedTileIndex]
+              : undefined
+          }
+          onSave={handleSaveGraphConfig}
+          onClose={handleDialogClose}
         />
-      </div>
+      )}
     </div>
   );
 }
+
+interface GraphTileWrapperProps {
+  config: GraphTileConfig;
+  graphHistory: ReturnType<typeof useGraphHistory>;
+  manualXRange: XRange | null;
+  onXRangeChange: (min: number, max: number) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  editMode: EditMode;
+}
+
+function GraphTileWrapper({
+  config,
+  graphHistory,
+  manualXRange,
+  onXRangeChange,
+  onEdit,
+  onDelete,
+  editMode,
+}: GraphTileWrapperProps): ReactElement {
+  const [panelWidth, setPanelWidth] = useState(300);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (container == null) return undefined;
+
+    const updateWidth = (): void => {
+      const rect = container.getBoundingClientRect();
+      setPanelWidth(Math.max(1, Math.floor(rect.width)));
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const displayRange = manualXRange ?? graphHistory.xRange;
+  const displayData = useMemo(
+    () =>
+      graphHistory.getDisplayData(
+        config.selectedSeries,
+        displayRange.min,
+        displayRange.max,
+        panelWidth,
+      ),
+    [
+      config.selectedSeries,
+      displayRange.max,
+      displayRange.min,
+      graphHistory,
+      panelWidth,
+    ],
+  );
+
+  const seriesDefinitions = useMemo(
+    () =>
+      config.selectedSeries
+        .map((key) => GRAPH_SERIES_BY_KEY[key])
+        .filter((def) => def !== undefined),
+    [config.selectedSeries],
+  );
+
+  return (
+    <div
+      className={`graph-tile ${editMode === 'edit' || editMode === 'delete' ? 'graph-tile--selectable' : ''}`}
+      ref={containerRef}
+    >
+      <UPlotGraphTile
+        title={config.title}
+        series={seriesDefinitions}
+        data={displayData}
+        seriesStyles={config.seriesStyles}
+        onXRangeChange={onXRangeChange}
+        onEdit={editMode === 'edit' ? onEdit : undefined}
+        onDelete={editMode === 'delete' ? onDelete : undefined}
+      />
+    </div>
+  );
+}
+
