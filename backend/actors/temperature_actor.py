@@ -179,6 +179,10 @@ class TemperatureActor:
             return self._run_disconnect(command)
         if action == "read_status":
             return self._run_read_status(command)
+        if action in ("write_setpoint", "set_run_mode", "set_stop_mode"):
+            return self._run_control(command)
+        if action == "write_ramping_rate":
+            return self._run_write_ramping_rate(command)
         return CommandResult(
             command_id=command.command_id,
             ok=False,
@@ -235,6 +239,46 @@ class TemperatureActor:
                 error="Temperature device is not connected",
             )
         responses = self._run_transactions(command)
+        return self._controller.parse_result(command, responses)
+
+    def _run_control(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature device is not connected",
+            )
+        responses = self._run_transactions(command)
+        return self._controller.parse_result(command, responses)
+
+    def _run_write_ramping_rate(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature device is not connected",
+            )
+
+        hu_responses = self._run_transactions(command)
+        hu_response = next(
+            (response for response in hu_responses if response.name == "HU"),
+            None,
+        )
+        if hu_response is None:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="missing FB100 HU response",
+            )
+
+        write_transactions = self._controller.build_ramping_write_transactions(
+            float(command.payload["value"]),
+            hu_response,
+        )
+        responses = [self._transport.transaction(tx) for tx in write_transactions]
         return self._controller.parse_result(command, responses)
 
     def _run_transactions(self, command: DeviceCommand) -> list[TransportResponse]:

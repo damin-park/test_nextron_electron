@@ -47,7 +47,11 @@ export function MainWindowShell({
         <div className="main-content">
           <Dashboard temperatureConnection={temperatureConnection} />
           <div className="work-area" ref={workAreaRef}>
-            <ControlPanel mode={currentMode} ref={controlPanelRef} />
+            <ControlPanel
+              mode={currentMode}
+              temperatureConnection={temperatureConnection}
+              ref={controlPanelRef}
+            />
             <div
               className="splitter"
               ref={splitterRef}

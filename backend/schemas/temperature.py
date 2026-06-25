@@ -9,6 +9,10 @@ class TemperatureSetpointRequest(BaseModel):
     value: float
 
 
+class TemperatureRampingRateRequest(BaseModel):
+    value: float
+
+
 class TemperatureConnectRequest(BaseModel):
     """신규 command-based connect endpoint 용 request.
 

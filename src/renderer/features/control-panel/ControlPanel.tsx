@@ -1,5 +1,7 @@
 import { forwardRef } from 'react';
+import type { UseTemperatureConnectionResult } from '../temperature/useTemperatureConnection';
 import type { ControlMode } from '../../shared/types/ui';
+import { ManualPanel } from '../manual/ManualPanel';
 
 interface ModeView {
   title: string;
@@ -28,10 +30,11 @@ const MODE_ORDER: ControlMode[] = ['recipe', 'manual', 'iv'];
 
 export interface ControlPanelProps {
   mode: ControlMode;
+  temperatureConnection: UseTemperatureConnectionResult;
 }
 
 export const ControlPanel = forwardRef<HTMLDivElement, ControlPanelProps>(
-  function ControlPanel({ mode }, ref) {
+  function ControlPanel({ mode, temperatureConnection }, ref) {
     return (
       <div className="control-panel" ref={ref}>
         <div className="control-panel__header">{MODE_VIEWS[mode].title}</div>
@@ -41,7 +44,13 @@ export const ControlPanel = forwardRef<HTMLDivElement, ControlPanelProps>(
             className={`control-panel__mode${key === mode ? ' is-active' : ''}`}
             data-mode={key}
           >
-            <div className="control-panel__placeholder">{MODE_VIEWS[key].placeholder}</div>
+            {key === 'manual' ? (
+              <ManualPanel temperatureConnection={temperatureConnection} />
+            ) : (
+              <div className="control-panel__placeholder">
+                {MODE_VIEWS[key].placeholder}
+              </div>
+            )}
           </div>
         ))}
       </div>

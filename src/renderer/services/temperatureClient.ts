@@ -86,3 +86,29 @@ export function stopTemperaturePolling(
 ): Promise<ApiCommandResponse> {
   return apiPost<ApiCommandResponse>(tempPath.pollingStop(deviceId));
 }
+
+export function writeTemperatureSetpoint(
+  deviceId: string,
+  value: number,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.setpoint(deviceId), { value });
+}
+
+export function writeTemperatureRampingRate(
+  deviceId: string,
+  value: number,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.rampingRate(deviceId), { value });
+}
+
+export function setTemperatureRunMode(
+  deviceId: string,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.run(deviceId));
+}
+
+export function setTemperatureStopMode(
+  deviceId: string,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.stop(deviceId));
+}

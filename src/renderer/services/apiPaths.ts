@@ -13,5 +13,10 @@ export const tempPath = {
   pollingStart: (id: string) =>
     `${DEVICES_BASE}/temperature/${id}/polling/start`,
   pollingStop: (id: string) => `${DEVICES_BASE}/temperature/${id}/polling/stop`,
+  setpoint: (id: string) => `${DEVICES_BASE}/temperature/${id}/setpoint`,
+  rampingRate: (id: string) =>
+    `${DEVICES_BASE}/temperature/${id}/ramping-rate`,
+  run: (id: string) => `${DEVICES_BASE}/temperature/${id}/run`,
+  stop: (id: string) => `${DEVICES_BASE}/temperature/${id}/stop`,
   state: (id: string) => `${DEVICES_BASE}/temperature/${id}/state`,
 };

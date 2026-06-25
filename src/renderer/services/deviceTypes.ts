@@ -108,6 +108,10 @@ export interface TemperatureDeviceState {
   pv?: number | null;
   hotPower?: number | null;
   coolPower?: number | null;
+  rampingRate?: number | null;
+  rampingRateUnit?: string | null;
+  temperatureRunMode?: boolean | null;
+  runMode?: boolean | null;
   /** 구코드 호환 alias */
   currentTemperature?: number | null;
   targetSetpoint?: number | null;

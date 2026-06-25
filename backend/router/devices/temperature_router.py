@@ -25,6 +25,7 @@ from backend.schemas.common_response import ApiCommandResponse, to_api_response
 from backend.schemas.temperature import (
     TemperatureConnectRequest,
     TemperaturePollingStartRequest,
+    TemperatureRampingRateRequest,
     TemperatureSetpointRequest,
 )
 from backend.services.temperature_service import TemperatureService
@@ -72,6 +73,29 @@ async def setpoint(
     return to_api_response(result)
 
 
+@router.post("/{device_id}/ramping-rate", response_model=ApiCommandResponse)
+async def ramping_rate(
+    device_id: str, body: TemperatureRampingRateRequest, request: Request
+) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.write_ramping_rate(device_id=device_id, value=body.value)
+    return to_api_response(result)
+
+
+@router.post("/{device_id}/run", response_model=ApiCommandResponse)
+async def run(device_id: str, request: Request) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.set_run_mode(device_id=device_id)
+    return to_api_response(result)
+
+
+@router.post("/{device_id}/stop", response_model=ApiCommandResponse)
+async def stop(device_id: str, request: Request) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.set_stop_mode(device_id=device_id)
+    return to_api_response(result)
+
+
 @router.post("/{device_id}/polling/start", response_model=ApiCommandResponse)
 async def polling_start(
     device_id: str, body: TemperaturePollingStartRequest, request: Request
@@ -101,4 +125,3 @@ async def get_status(device_id: str, request: Request) -> ApiCommandResponse:
     svc: TemperatureService = request.app.state.temperature_service
     result = await svc.get_state(device_id=device_id)
     return to_api_response(result)
-
