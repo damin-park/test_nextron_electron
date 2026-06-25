@@ -1247,7 +1247,7 @@
 
 .manual-form__field {
   display: grid;
-  grid-template-columns: minmax(92px, 1fr) 88px 48px;
+  grid-template-columns: minmax(92px, 1fr) 88px;
   align-items: center;
   gap: 8px;
 }
@@ -1279,27 +1279,6 @@
 
 .manual-form__input:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.manual-form__button {
-  height: 30px;
-  border: 1px solid var(--md3-outline-variant);
-  border-radius: 4px;
-  background: var(--md3-surface-container-high);
-  color: var(--md3-on-surface-variant);
-  font-family: var(--font-medium);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.manual-form__button:hover:not(:disabled) {
-  background: var(--md3-surface-container-highest);
-  color: var(--md3-on-surface);
-}
-
-.manual-form__button:disabled {
-  opacity: 0.38;
   cursor: not-allowed;
 }
 

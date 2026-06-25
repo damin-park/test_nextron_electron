@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
 // main_window.py 의 폭 제약
-const MIN_CONTROL_WIDTH = 260;
+const MIN_CONTROL_WIDTH = 325;
 const MIN_GRAPH_WIDTH = 420;
 const SPLITTER_WIDTH = 4;
 

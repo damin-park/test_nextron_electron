@@ -3,6 +3,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
   type ReactElement,
 } from 'react';
 import type { TemperatureDeviceState } from '../../services/deviceTypes';
@@ -67,6 +68,7 @@ export function GraphPanel({ temperatureState }: GraphPanelProps): ReactElement 
     if (editMode === 'edit') {
       setSelectedTileIndex(index);
       setDialogMode('edit');
+      setEditMode('none');
     }
   };
 
@@ -306,10 +308,34 @@ function GraphTileWrapper({
     [config.selectedSeries],
   );
 
+  const handleTileClick = (): void => {
+    if (editMode === 'edit') {
+      onEdit();
+      return;
+    }
+
+    if (editMode === 'delete') {
+      onDelete();
+    }
+  };
+
+  const handleTileKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (editMode !== 'edit' && editMode !== 'delete') return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleTileClick();
+  };
+
   return (
     <div
       className={`graph-tile ${editMode === 'edit' || editMode === 'delete' ? 'graph-tile--selectable' : ''}`}
       ref={containerRef}
+      onClick={handleTileClick}
+      onKeyDown={handleTileKeyDown}
+      role={editMode === 'edit' || editMode === 'delete' ? 'button' : undefined}
+      tabIndex={editMode === 'edit' || editMode === 'delete' ? 0 : undefined}
     >
       <UPlotGraphTile
         title={config.title}
@@ -317,10 +343,7 @@ function GraphTileWrapper({
         data={displayData}
         seriesStyles={config.seriesStyles}
         onXRangeChange={onXRangeChange}
-        onEdit={editMode === 'edit' ? onEdit : undefined}
-        onDelete={editMode === 'delete' ? onDelete : undefined}
       />
     </div>
   );
 }
-

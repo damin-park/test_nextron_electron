@@ -1,4 +1,9 @@
-import { useState, type ReactElement } from 'react';
+import {
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+} from 'react';
 import type { ApiCommandResponse } from '../../services/deviceTypes';
 import {
   setTemperatureRunMode,
@@ -20,8 +25,11 @@ export function ManualTemperatureControl({
   const [rampingRate, setRampingRate] = useState('30.0');
   const [pendingCommand, setPendingCommand] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const lastSubmittedSetValueRef = useRef(setValue);
+  const lastSubmittedRampingRateRef = useRef(rampingRate);
 
   const connected = state?.connected === true;
+  const runModeOn = Boolean(state?.temperatureRunMode ?? state?.runMode);
   const busy = pendingCommand != null;
 
   const runCommand = async (
@@ -49,7 +57,12 @@ export function ManualTemperatureControl({
   };
 
   const parseInput = (raw: string, label: string): number | null => {
-    const value = Number(raw);
+    const normalized = raw.trim();
+    const value = Number(normalized);
+    if (normalized.length === 0) {
+      setMessage(`${label} must be numeric`);
+      return null;
+    }
     if (!Number.isFinite(value)) {
       setMessage(`${label} must be numeric`);
       return null;
@@ -57,20 +70,41 @@ export function ManualTemperatureControl({
     return value;
   };
 
-  const handleSetValue = (): Promise<boolean> => {
-    const value = parseInput(setValue, 'Set Value');
+  const commitSetValue = async (force = false): Promise<boolean> => {
+    const raw = setValue.trim();
+    if (!force && (!runModeOn || raw === lastSubmittedSetValueRef.current)) {
+      return false;
+    }
+    const value = parseInput(raw, 'Set Value');
     if (value == null) return Promise.resolve(false);
-    return runCommand('Set Value', () =>
+    const ok = await runCommand('Set Value', () =>
       writeTemperatureSetpoint('temperature-1', value),
     );
+    if (ok) lastSubmittedSetValueRef.current = raw;
+    return ok;
   };
 
-  const handleRampingRate = (): Promise<boolean> => {
-    const value = parseInput(rampingRate, 'Ramping Rate');
+  const commitRampingRate = async (force = false): Promise<boolean> => {
+    const raw = rampingRate.trim();
+    if (!force && (!runModeOn || raw === lastSubmittedRampingRateRef.current)) {
+      return false;
+    }
+    const value = parseInput(raw, 'Ramping Rate');
     if (value == null) return Promise.resolve(false);
-    return runCommand('Ramping Rate', () =>
+    const ok = await runCommand('Ramping Rate', () =>
       writeTemperatureRampingRate('temperature-1', value),
     );
+    if (ok) lastSubmittedRampingRateRef.current = raw;
+    return ok;
+  };
+
+  const handleEntryKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+    commit: () => Promise<boolean>,
+  ): void => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    void commit();
   };
 
   const handleRun = async (): Promise<void> => {
@@ -78,13 +112,9 @@ export function ManualTemperatureControl({
     if (targetValue == null) return;
     const rampValue = parseInput(rampingRate, 'Ramping Rate');
     if (rampValue == null) return;
-    const setOk = await runCommand('Set Value', () =>
-      writeTemperatureSetpoint('temperature-1', targetValue),
-    );
+    const setOk = await commitSetValue(true);
     if (!setOk) return;
-    const rampOk = await runCommand('Ramping Rate', () =>
-      writeTemperatureRampingRate('temperature-1', rampValue),
-    );
+    const rampOk = await commitRampingRate(true);
     if (!rampOk) return;
     await runCommand('On', () => setTemperatureRunMode('temperature-1'));
   };
@@ -115,17 +145,11 @@ export function ManualTemperatureControl({
             className="manual-form__input"
             value={setValue}
             onChange={(event) => setSetValue(event.target.value)}
+            onBlur={() => void commitSetValue()}
+            onKeyDown={(event) => handleEntryKeyDown(event, commitSetValue)}
             disabled={!connected || busy}
             inputMode="decimal"
           />
-          <button
-            type="button"
-            className="manual-form__button"
-            onClick={() => void handleSetValue()}
-            disabled={!connected || busy}
-          >
-            Set
-          </button>
         </div>
 
         <div className="manual-form__field">
@@ -137,17 +161,11 @@ export function ManualTemperatureControl({
             className="manual-form__input"
             value={rampingRate}
             onChange={(event) => setRampingRate(event.target.value)}
+            onBlur={() => void commitRampingRate()}
+            onKeyDown={(event) => handleEntryKeyDown(event, commitRampingRate)}
             disabled={!connected || busy}
             inputMode="decimal"
           />
-          <button
-            type="button"
-            className="manual-form__button"
-            onClick={() => void handleRampingRate()}
-            disabled={!connected || busy}
-          >
-            Set
-          </button>
         </div>
       </div>
 

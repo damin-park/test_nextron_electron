@@ -37,10 +37,8 @@ function buildEmptyData(seriesCount: number): GraphDisplayData {
   return [[], ...Array.from({ length: seriesCount }, () => [])];
 }
 
-function formatElapsedSeconds(value: number): string {
-  if (value >= 3600) return `${(value / 3600).toFixed(2)} h`;
-  if (value >= 60) return `${(value / 60).toFixed(1)} min`;
-  return `${value.toFixed(1)} s`;
+function formatSeconds(value: number): string {
+  return value.toFixed(1);
 }
 
 export function UPlotGraphTile({
@@ -129,11 +127,11 @@ export function UPlotGraphTile({
       },
       axes: [
         {
-          label: 'Elapsed Time',
+          label: 'Time [s]',
           stroke: '#B8B8B8',
           grid: { stroke: '#2A2A2A', width: 1 },
           ticks: { stroke: '#555555', width: 1 },
-          values: (_self, splits) => splits.map(formatElapsedSeconds),
+          values: (_self, splits) => splits.map(formatSeconds),
         },
         {
           label: unitLabel,
