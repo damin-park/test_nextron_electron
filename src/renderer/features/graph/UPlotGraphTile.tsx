@@ -56,6 +56,8 @@ export function UPlotGraphTile({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const plotHostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
+  const onXRangeChangeRef = useRef(onXRangeChange);
+  const seriesVisibilityRef = useRef<Partial<Record<GraphSeriesKey, boolean>>>({});
   const [size, setSize] = useState<PlotSize>({ width: 0, height });
 
   const unitLabel = useMemo(
@@ -77,6 +79,10 @@ export function UPlotGraphTile({
     [series, seriesStyles],
   );
   const canRender = size.width > 0 && size.height > 0;
+
+  useEffect(() => {
+    onXRangeChangeRef.current = onXRangeChange;
+  }, [onXRangeChange]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -156,23 +162,40 @@ export function UPlotGraphTile({
         setSelect: [
           (plot) => {
             const selection = plot.select;
+            const handleXRangeChange = onXRangeChangeRef.current;
             if (
-              onXRangeChange != null &&
+              handleXRangeChange != null &&
               selection.width > 0 &&
               Number.isFinite(selection.left)
             ) {
               const min = plot.posToVal(selection.left, 'x');
               const max = plot.posToVal(selection.left + selection.width, 'x');
               if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
-                onXRangeChange(min, max);
+                handleXRangeChange(min, max);
               }
             }
+          },
+        ],
+        setSeries: [
+          (_plot, seriesIdx, opts) => {
+            if (seriesIdx == null || seriesIdx <= 0 || opts.show == null) return;
+
+            const seriesDef = series[seriesIdx - 1];
+            if (seriesDef == null) return;
+
+            seriesVisibilityRef.current[seriesDef.key] = opts.show;
           },
         ],
       },
     };
 
     const plot = new uPlot(options, initialData, host);
+    series.forEach((item, index) => {
+      const visible = seriesVisibilityRef.current[item.key];
+      if (visible != null) {
+        plot.setSeries(index + 1, { show: visible }, false);
+      }
+    });
     plotRef.current = plot;
 
     return () => {
@@ -181,7 +204,6 @@ export function UPlotGraphTile({
     };
   }, [
     canRender,
-    onXRangeChange,
     series,
     seriesSignature,
     unitLabel,
