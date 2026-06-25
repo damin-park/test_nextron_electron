@@ -279,6 +279,10 @@
   min-height: 0;
 }
 
+.graph-tile .u-cursor-pt {
+  display: none !important;
+}
+
 /* ─────────────────────────────────────────
    Graph Setting Dialog
    Tkinter graph_setting.py:

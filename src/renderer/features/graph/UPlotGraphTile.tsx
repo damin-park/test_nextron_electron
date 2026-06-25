@@ -111,6 +111,7 @@ export function UPlotGraphTile({
       padding: [8, 8, 0, 0],
       legend: { show: true },
       cursor: {
+        points: { show: false },
         drag: {
           x: true,
           y: false,
@@ -227,11 +228,8 @@ export function UPlotGraphTile({
             )}
           </div>
         </div>
-        <div className="graph-tile__unit">{unitLabel}</div>
       </div>
       <div className="graph-tile__plot" ref={plotHostRef} />
     </section>
   );
 }
-
-
