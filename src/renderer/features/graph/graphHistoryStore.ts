@@ -23,6 +23,7 @@ const SAMPLE_INPUT_BY_SERIES: Record<
   temperature_sv: 'temperatureSv',
   temperature_hp: 'temperatureHotPower',
   temperature_cp: 'temperatureCoolPower',
+  temperature_total_profile: 'temperatureTotalProfile',
 };
 
 export function createEmptyGraphHistory(): GraphHistory {

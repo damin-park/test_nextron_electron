@@ -2,7 +2,8 @@ export type GraphSeriesKey =
   | 'temperature_pv'
   | 'temperature_sv'
   | 'temperature_hp'
-  | 'temperature_cp';
+  | 'temperature_cp'
+  | 'temperature_total_profile';
 
 export type GraphSeriesGroup = 'Temperature' | 'Power';
 
@@ -65,6 +66,7 @@ export interface GraphSampleInput {
   temperatureSv?: number | null;
   temperatureHotPower?: number | null;
   temperatureCoolPower?: number | null;
+  temperatureTotalProfile?: number | null;
 }
 
 export type GraphDisplayData = [
@@ -108,7 +110,7 @@ export const DEFAULT_GRAPH_LAYOUT: GraphLayoutConfig = {
       id: '1',
       title: 'Temperature',
       xAxis: 'time',
-      selectedSeries: ['temperature_pv', 'temperature_sv'],
+      selectedSeries: ['temperature_pv', 'temperature_sv', 'temperature_total_profile'],
     },
   ],
 };

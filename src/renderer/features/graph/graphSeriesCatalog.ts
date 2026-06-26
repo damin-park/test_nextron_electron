@@ -18,6 +18,14 @@ export const GRAPH_SERIES_CATALOG: GraphSeriesDefinition[] = [
     color: '#FF383C',
   },
   {
+    key: 'temperature_total_profile',
+    label: 'TC Profile',
+    group: 'Temperature',
+    unitLabel: 'Temperature [C]',
+    defaultVisible: true,
+    color: '#FFC857',
+  },
+  {
     key: 'temperature_hp',
     label: 'TC Hot',
     group: 'Power',

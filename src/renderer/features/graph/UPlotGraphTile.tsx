@@ -23,6 +23,7 @@ export interface UPlotGraphTileProps {
   /** Optional per-series style overrides (color / width / line style) */
   seriesStyles?: Partial<Record<GraphSeriesKey, SeriesPlotStyle>>;
   height?: number;
+  verticalLineX?: number | null;
   onXRangeChange?: (min: number, max: number) => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -47,6 +48,7 @@ export function UPlotGraphTile({
   data,
   seriesStyles,
   height = 320,
+  verticalLineX,
   onXRangeChange,
   onEdit,
   onDelete,
@@ -55,6 +57,7 @@ export function UPlotGraphTile({
   const plotHostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
   const onXRangeChangeRef = useRef(onXRangeChange);
+  const verticalLineXRef = useRef(verticalLineX);
   const seriesVisibilityRef = useRef<Partial<Record<GraphSeriesKey, boolean>>>({});
   const [size, setSize] = useState<PlotSize>({ width: 0, height });
 
@@ -81,6 +84,11 @@ export function UPlotGraphTile({
   useEffect(() => {
     onXRangeChangeRef.current = onXRangeChange;
   }, [onXRangeChange]);
+
+  useEffect(() => {
+    verticalLineXRef.current = verticalLineX;
+    plotRef.current?.redraw(false, false);
+  }, [verticalLineX]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -172,6 +180,24 @@ export function UPlotGraphTile({
                 handleXRangeChange(min, max);
               }
             }
+          },
+        ],
+        draw: [
+          (plot) => {
+            const x = verticalLineXRef.current;
+            if (x == null || !Number.isFinite(x)) return;
+            const left = plot.valToPos(x, 'x', true);
+            const bbox = plot.bbox;
+            const ctx = plot.ctx;
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = '#FFC857';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.moveTo(left, bbox.top);
+            ctx.lineTo(left, bbox.top + bbox.height);
+            ctx.stroke();
+            ctx.restore();
           },
         ],
         setSeries: [

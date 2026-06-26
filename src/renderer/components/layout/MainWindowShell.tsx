@@ -10,11 +10,12 @@
  * Settings 는 별도 팝업 윈도우로 열린다(인라인 대체 아님).
  * 기존 vanilla DOM 구조(mainWindow.ts)와 동일한 계층/클래스를 유지한다.
  */
-import type { ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
 import { APP_VERSION } from '../../../shared/app-version';
 import { Dashboard } from '../../features/dashboard/Dashboard';
 import { ControlPanel } from '../../features/control-panel/ControlPanel';
 import { GraphPanel } from '../../features/graph/GraphPanel';
+import type { RecipeGraphState } from '../../features/recipe/recipeTypes';
 import { useTemperatureConnection } from '../../features/temperature/useTemperatureConnection';
 import type { ControlMode } from '../../shared/types/ui';
 import { MenuBar } from './MenuBar';
@@ -34,6 +35,15 @@ export function MainWindowShell({
 }: MainWindowShellProps): ReactElement {
   const { controlPanelRef, workAreaRef, splitterRef, onPointerDown } = useSplitter();
   const temperatureConnection = useTemperatureConnection('temperature-1');
+  const [recipeGraphState, setRecipeGraphState] = useState<RecipeGraphState>({
+    profile: [],
+    elapsedSec: null,
+    running: false,
+  });
+  const handleRecipeGraphStateChange = useCallback(
+    (state: RecipeGraphState) => setRecipeGraphState(state),
+    [],
+  );
 
   return (
     <div className="app-root">
@@ -50,6 +60,7 @@ export function MainWindowShell({
             <ControlPanel
               mode={currentMode}
               temperatureConnection={temperatureConnection}
+              onRecipeGraphStateChange={handleRecipeGraphStateChange}
               ref={controlPanelRef}
             />
             <div
@@ -57,7 +68,10 @@ export function MainWindowShell({
               ref={splitterRef}
               onPointerDown={onPointerDown}
             />
-            <GraphPanel temperatureState={temperatureConnection.state} />
+            <GraphPanel
+              temperatureState={temperatureConnection.state}
+              recipeGraphState={recipeGraphState}
+            />
           </div>
         </div>
       </div>

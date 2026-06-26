@@ -2,6 +2,8 @@ import { forwardRef } from 'react';
 import type { UseTemperatureConnectionResult } from '../temperature/useTemperatureConnection';
 import type { ControlMode } from '../../shared/types/ui';
 import { ManualPanel } from '../manual/ManualPanel';
+import { RecipePanel } from '../recipe/RecipePanel';
+import type { RecipeGraphState } from '../recipe/recipeTypes';
 
 interface ModeView {
   title: string;
@@ -31,10 +33,14 @@ const MODE_ORDER: ControlMode[] = ['recipe', 'manual', 'iv'];
 export interface ControlPanelProps {
   mode: ControlMode;
   temperatureConnection: UseTemperatureConnectionResult;
+  onRecipeGraphStateChange: (state: RecipeGraphState) => void;
 }
 
 export const ControlPanel = forwardRef<HTMLDivElement, ControlPanelProps>(
-  function ControlPanel({ mode, temperatureConnection }, ref) {
+  function ControlPanel(
+    { mode, temperatureConnection, onRecipeGraphStateChange },
+    ref,
+  ) {
     return (
       <div className="control-panel" ref={ref}>
         <div className="control-panel__header">{MODE_VIEWS[mode].title}</div>
@@ -46,6 +52,11 @@ export const ControlPanel = forwardRef<HTMLDivElement, ControlPanelProps>(
           >
             {key === 'manual' ? (
               <ManualPanel temperatureConnection={temperatureConnection} />
+            ) : key === 'recipe' ? (
+              <RecipePanel
+                temperatureConnection={temperatureConnection}
+                onGraphStateChange={onRecipeGraphStateChange}
+              />
             ) : (
               <div className="control-panel__placeholder">
                 {MODE_VIEWS[key].placeholder}

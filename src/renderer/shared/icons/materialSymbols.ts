@@ -17,7 +17,9 @@ export type IconName =
   | 'delete'
   | 'edit'
   | 'replay'
-  | 'close';
+  | 'close'
+  | 'play_arrow'
+  | 'stop';
 
 const ICON_GLYPHS: Record<IconName, string> = {
   description: '\uE873',
@@ -35,6 +37,8 @@ const ICON_GLYPHS: Record<IconName, string> = {
   edit: '\uE3C9',
   replay: '\uE042',
   close: '\uE5CD',
+  play_arrow: '\uE037',
+  stop: '\uE047',
 };
 
 export function getIconGlyph(name: IconName): string {

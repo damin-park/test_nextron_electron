@@ -7,11 +7,18 @@ import {
   type ReactElement,
 } from 'react';
 import type { TemperatureDeviceState } from '../../services/deviceTypes';
+import type {
+  RecipeGraphState,
+  RecipeProfilePoint,
+} from '../recipe/recipeTypes';
 import {
   GRAPH_SERIES_BY_KEY,
 } from './graphSeriesCatalog';
 import type {
+  GraphDisplayData,
   GraphLayoutConfig,
+  GraphSeriesKey,
+  GraphSeriesValue,
   GraphTileConfig,
 } from './graphTypes';
 import { DEFAULT_GRAPH_LAYOUT } from './graphTypes';
@@ -27,6 +34,7 @@ import { getIconGlyph } from '../../shared/icons/materialSymbols';
 
 interface GraphPanelProps {
   temperatureState: TemperatureDeviceState | null;
+  recipeGraphState: RecipeGraphState;
 }
 
 interface XRange {
@@ -37,7 +45,10 @@ interface XRange {
 type EditMode = 'none' | 'edit' | 'delete';
 type DialogMode = 'closed' | 'add' | 'edit';
 
-export function GraphPanel({ temperatureState }: GraphPanelProps): ReactElement {
+export function GraphPanel({
+  temperatureState,
+  recipeGraphState,
+}: GraphPanelProps): ReactElement {
   const graphHistory = useGraphHistory(temperatureState);
   const [layout, setLayout] = useState<GraphLayoutConfig>(() => {
     const loaded = loadGraphLayout();
@@ -219,6 +230,7 @@ export function GraphPanel({ temperatureState }: GraphPanelProps): ReactElement 
               key={tileConfig.id}
               config={tileConfig}
               graphHistory={graphHistory}
+              recipeGraphState={recipeGraphState}
               manualXRange={manualXRange}
               onXRangeChange={(min, max) => setManualXRange({ min, max })}
               onEdit={() => handleEditClick(index)}
@@ -247,6 +259,7 @@ export function GraphPanel({ temperatureState }: GraphPanelProps): ReactElement 
 interface GraphTileWrapperProps {
   config: GraphTileConfig;
   graphHistory: ReturnType<typeof useGraphHistory>;
+  recipeGraphState: RecipeGraphState;
   manualXRange: XRange | null;
   onXRangeChange: (min: number, max: number) => void;
   onEdit: () => void;
@@ -257,6 +270,7 @@ interface GraphTileWrapperProps {
 function GraphTileWrapper({
   config,
   graphHistory,
+  recipeGraphState,
   manualXRange,
   onXRangeChange,
   onEdit,
@@ -284,19 +298,28 @@ function GraphTileWrapper({
 
   const displayRange = manualXRange ?? graphHistory.xRange;
   const displayData = useMemo(
-    () =>
-      graphHistory.getDisplayData(
+    () => {
+      const data = graphHistory.getDisplayData(
         config.selectedSeries,
         displayRange.min,
         displayRange.max,
         panelWidth,
-      ),
+      );
+      return mergeRecipeProfileData(
+        data,
+        config.selectedSeries,
+        recipeGraphState.profile,
+        displayRange.min,
+        displayRange.max,
+      );
+    },
     [
       config.selectedSeries,
       displayRange.max,
       displayRange.min,
       graphHistory,
       panelWidth,
+      recipeGraphState.profile,
     ],
   );
 
@@ -342,8 +365,90 @@ function GraphTileWrapper({
         series={seriesDefinitions}
         data={displayData}
         seriesStyles={config.seriesStyles}
+        verticalLineX={recipeGraphState.elapsedSec}
         onXRangeChange={onXRangeChange}
       />
     </div>
   );
+}
+
+function mergeRecipeProfileData(
+  data: GraphDisplayData,
+  seriesKeys: readonly GraphSeriesKey[],
+  profile: readonly RecipeProfilePoint[],
+  xMin: number | null | undefined,
+  xMax: number | null | undefined,
+): GraphDisplayData {
+  const profileIndex = seriesKeys.indexOf('temperature_total_profile');
+  if (profileIndex < 0 || profile.length === 0) return data;
+
+  const existingX = data[0] ?? [];
+  const profileX = sampleRecipeProfileX(profile, xMin, xMax);
+  const xSet = new Set<number>(existingX);
+  profileX.forEach((x) => xSet.add(x));
+
+  const alignedX = Array.from(xSet).sort((a, b) => a - b);
+  if (alignedX.length === 0) {
+    return [[], ...seriesKeys.map(() => [])];
+  }
+
+  const existingMaps = seriesKeys.map((_, seriesIndex) => {
+    const y = data[seriesIndex + 1] ?? [];
+    const values = new Map<number, GraphSeriesValue>();
+    existingX.forEach((x, index) => values.set(x, y[index] ?? null));
+    return values;
+  });
+
+  const ySeries = seriesKeys.map((key, seriesIndex) => {
+    if (key === 'temperature_total_profile') {
+      return alignedX.map((x) => interpolateRecipeProfile(profile, x));
+    }
+    const existingMap = existingMaps[seriesIndex];
+    return alignedX.map((x) => existingMap.get(x) ?? null);
+  });
+
+  return [alignedX, ...ySeries];
+}
+
+function sampleRecipeProfileX(
+  profile: readonly RecipeProfilePoint[],
+  xMin: number | null | undefined,
+  xMax: number | null | undefined,
+): number[] {
+  if (profile.length === 0) return [];
+  const first = profile[0].timeSec;
+  const last = profile[profile.length - 1].timeSec;
+  const min = xMin == null ? first : Math.max(first, xMin);
+  const max = xMax == null ? last : Math.min(last, xMax);
+  if (max < min) return [];
+
+  const points = profile
+    .map((point) => point.timeSec)
+    .filter((time) => time >= min && time <= max);
+  points.push(min, max);
+  return Array.from(new Set(points)).sort((a, b) => a - b);
+}
+
+function interpolateRecipeProfile(
+  profile: readonly RecipeProfilePoint[],
+  x: number,
+): GraphSeriesValue {
+  if (profile.length === 0) return null;
+  const first = profile[0];
+  const last = profile[profile.length - 1];
+  if (x < first.timeSec || x > last.timeSec) return null;
+  if (Math.abs(x - first.timeSec) < 0.000001) return first.value;
+
+  for (let index = 1; index < profile.length; index += 1) {
+    const prev = profile[index - 1];
+    const next = profile[index];
+    if (x > next.timeSec) continue;
+    if (Math.abs(next.timeSec - prev.timeSec) < 0.000001) {
+      return next.value;
+    }
+    const ratio = (x - prev.timeSec) / (next.timeSec - prev.timeSec);
+    return prev.value + (next.value - prev.value) * ratio;
+  }
+
+  return last.value;
 }
