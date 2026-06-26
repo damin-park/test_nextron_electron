@@ -577,7 +577,16 @@
 }
 
 .temp-card.is-collapsed {
-  width: 169px; /* 260 * 0.65 */
+  width: 152px; /* 260 * 0.65 */
+}
+
+.temp-card.is-collapsed .temp-card__body {
+  justify-content: center;
+}
+
+.temp-card.is-collapsed .temp-card__left {
+  min-width: auto;
+  align-items: center;
 }
 
 /* ─── 타이틀 행 ─── */
@@ -688,9 +697,10 @@
 
 .temp-card__row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 5px;
   font-size: 12px;
+  min-height: 18px;
   white-space: nowrap;
 }
 
@@ -704,6 +714,7 @@
   font-size: 10px;
   font-weight: 700;
   color: var(--md3-on-surface); /* TEXT_COLOR */
+  line-height: 1;
   width: 18px;
 }
 
@@ -712,6 +723,7 @@
   font-family: var(--font-medium);
   font-size: 12px;
   color: var(--md3-on-surface-variant); /* SUB_TEXT_COLOR #CCCCCC */
+  line-height: 1;
   text-align: right;
 }
 
@@ -721,6 +733,7 @@
   font-size: 16px;
   font-weight: 700;
   color: var(--md3-on-surface);
+  line-height: 1;
   min-width: 56px;
   text-align: center;
 }
@@ -738,12 +751,14 @@
   font-family: var(--font-medium);
   font-size: 13px;
   color: var(--md3-on-surface);
+  line-height: 1;
   min-width: 40px;
   text-align: right;
 }
 
 .temp-card__unit {
   font-size: 10px;
+  line-height: 1;
   color: var(--md3-on-surface-variant);
 }
 
@@ -1482,7 +1497,7 @@
 
 .recipe-run-summary__label {
   color: var(--md3-on-surface);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .recipe-run-summary .is-running {
@@ -1670,8 +1685,8 @@
   background: #202020;
   color: #ffffff;
   font-family: var(--font-medium);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1.08;
 }
 
@@ -1681,19 +1696,19 @@
 
 .recipe-table .recipe-table__idx-col,
 .recipe-table .recipe-table__idx {
-  width: 40px;
+  width: 18px;
 }
 
 .recipe-table .recipe-table__target-col {
-  width: 118px;
+  width: 50px;
 }
 
 .recipe-table .recipe-table__ramping-col {
-  width: 92px;
+  width: 35px;
 }
 
 .recipe-table .recipe-table__time-col {
-  width: 58px;
+  width: 25px;
 }
 
 .recipe-table .recipe-table__action-col {

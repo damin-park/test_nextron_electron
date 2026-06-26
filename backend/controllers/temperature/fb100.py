@@ -114,7 +114,7 @@ class FB100:
                     command_id=command.command_id,
                     ok=True,
                     device_id=command.device_id,
-                    data={"rampingRate": value, "rampingRateUnit": "C/min"},
+                    data={"rampingRate": value, "rampingRateUnit": "°C/min"},
                 )
 
             if action == "set_run_mode":
@@ -196,7 +196,7 @@ class FB100:
                 "pv": pv,
                 "hotPower": hot,
                 "coolPower": cool,
-                "unit": "C",
+                "unit": "°C",
                 "currentTemperature": pv,
                 "targetSetpoint": sv,
                 "temperatureRunMode": run_mode,

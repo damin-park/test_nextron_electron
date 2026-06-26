@@ -40,7 +40,7 @@ class MockTemperatureController(TemperatureControllerBase):
             connected=self._connected,
             currentTemperature=self._current_temperature if self._connected else None,
             setpoint=self._setpoint if self._connected else None,
-            unit="\u00b0C",
+            unit="°C",
         )
 
     def is_connected(self) -> bool:

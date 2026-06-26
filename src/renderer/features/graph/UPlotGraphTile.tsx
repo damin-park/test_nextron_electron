@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ReactElement,
+  type WheelEvent as ReactWheelEvent,
 } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
@@ -25,6 +26,7 @@ export interface UPlotGraphTileProps {
   height?: number;
   verticalLineX?: number | null;
   onXRangeChange?: (min: number, max: number) => void;
+  onXRangeReset?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -50,6 +52,7 @@ export function UPlotGraphTile({
   height = 320,
   verticalLineX,
   onXRangeChange,
+  onXRangeReset,
   onEdit,
   onDelete,
 }: UPlotGraphTileProps): ReactElement {
@@ -246,6 +249,46 @@ export function UPlotGraphTile({
     );
   }, [data, series.length]);
 
+  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>): void => {
+    const plot = plotRef.current;
+    const handleXRangeChange = onXRangeChangeRef.current;
+    const host = plotHostRef.current;
+    if (plot == null || handleXRangeChange == null || host == null) return;
+
+    const min = plot.scales.x.min;
+    const max = plot.scales.x.max;
+    if (
+      min == null ||
+      max == null ||
+      !Number.isFinite(min) ||
+      !Number.isFinite(max) ||
+      min >= max
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const span = max - min;
+    if (event.shiftKey) {
+      const panDelta = (event.deltaX || event.deltaY) * span * 0.001;
+      handleXRangeChange(min + panDelta, max + panDelta);
+      return;
+    }
+
+    const rect = host.getBoundingClientRect();
+    const ratio =
+      rect.width > 0
+        ? Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1)
+        : 0.5;
+    const anchor = min + span * ratio;
+    const zoomFactor = event.deltaY < 0 ? 0.82 : 1.18;
+    const nextMin = anchor - (anchor - min) * zoomFactor;
+    const nextMax = anchor + (max - anchor) * zoomFactor;
+    if (nextMax - nextMin <= 0.001) return;
+    handleXRangeChange(nextMin, nextMax);
+  };
+
   return (
     <section className="graph-tile" ref={containerRef}>
       <div className="graph-tile__header">
@@ -275,7 +318,12 @@ export function UPlotGraphTile({
           </div>
         </div>
       </div>
-      <div className="graph-tile__plot" ref={plotHostRef} />
+      <div
+        className="graph-tile__plot"
+        ref={plotHostRef}
+        onWheel={handleWheel}
+        onDoubleClick={onXRangeReset}
+      />
     </section>
   );
 }

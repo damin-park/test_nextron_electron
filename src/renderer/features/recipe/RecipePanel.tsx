@@ -65,13 +65,13 @@ const PROFILE_TABS: RecipeProfileTabConfig[] = [
   {
     kind: 'temperature',
     label: 'Temperature',
-    unitLabel: 'Temperature [C]',
+    unitLabel: 'Temperature [°C]',
     enabled: true,
   },
   { kind: 'mfc', label: 'MFC', unitLabel: 'Flow [sccm]', enabled: false },
   { kind: 'humidity', label: 'Humidity', unitLabel: 'Humidity [%RH]', enabled: false },
   { kind: 'pressure', label: 'Pressure', unitLabel: 'Pressure [Torr]', enabled: false },
-  { kind: 'chiller', label: 'Chiller', unitLabel: 'Temperature [C]', enabled: false },
+  { kind: 'chiller', label: 'Chiller', unitLabel: 'Temperature [°C]', enabled: false },
 ];
 
 const PROFILE_PREVIEW_MIN_HEIGHT = 142;
@@ -633,12 +633,12 @@ export function RecipePanel({
                   <th className="recipe-table__target-col">
                     <span>Target</span>
                     <span>Temperature</span>
-                    <span>(C)</span>
+                    <span>(°C)</span>
                   </th>
                   <th className="recipe-table__ramping-col">
                     <span>Ramping</span>
                     <span>Rate</span>
-                    <span>(C/min)</span>
+                    <span>(°C/min)</span>
                   </th>
                 </>
               )}

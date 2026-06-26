@@ -159,7 +159,7 @@ export function ManualTemperatureControl({
       <div className="manual-form">
         <div className="manual-form__field">
           <label className="manual-form__label" htmlFor="manual-temp-set-value">
-            Set Value [C]
+            Set Value [°C]
           </label>
           <input
             id="manual-temp-set-value"
@@ -175,7 +175,7 @@ export function ManualTemperatureControl({
 
         <div className="manual-form__field">
           <label className="manual-form__label" htmlFor="manual-temp-ramping">
-            Ramping Rate [C/min]
+            Ramping Rate [°C/min]
           </label>
           <input
             id="manual-temp-ramping"

@@ -178,7 +178,7 @@ async def temperature_status(request: Request) -> TemperatureStatus:
             connected=True,
             currentTemperature=data.get("currentTemperature"),
             setpoint=data.get("targetSetpoint") or data.get("sv"),
-            unit=str(data.get("unit") or "C"),
+            unit=str(data.get("unit") or "°C"),
         )
     return TemperatureStatus(
         mode=get_device_mode(),
@@ -232,5 +232,5 @@ async def temperature_read(request: Request) -> TemperatureReading:
         connected=bool(data.get("connected")),
         currentTemperature=data.get("currentTemperature"),
         setpoint=data.get("targetSetpoint") or data.get("sv"),
-        unit=str(data.get("unit") or "C"),
+        unit=str(data.get("unit") or "°C"),
     )

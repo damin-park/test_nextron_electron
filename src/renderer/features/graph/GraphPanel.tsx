@@ -75,7 +75,8 @@ export function GraphPanel({
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(
     null,
   );
-  const [manualXRange, setManualXRange] = useState<XRange | null>(null);
+  const [tileXRanges, setTileXRanges] = useState<Record<string, XRange>>({});
+  const hasCustomXRange = Object.keys(tileXRanges).length > 0;
 
   // Save layout whenever it changes
   useLayoutEffect(() => {
@@ -87,7 +88,7 @@ export function GraphPanel({
     if (lastResetTokenRef.current === resetToken) return;
     lastResetTokenRef.current = resetToken;
     graphHistory.clear();
-    setManualXRange(null);
+    setTileXRanges({});
   }, [graphHistory, resetToken]);
 
   useEffect(() => {
@@ -95,12 +96,12 @@ export function GraphPanel({
     previousModeRef.current = currentMode;
     if (previousMode === 'recipe' && currentMode === 'manual') {
       graphHistory.clear();
-      setManualXRange(null);
+      setTileXRanges({});
       return;
     }
     if (previousMode === 'manual' && currentMode === 'recipe') {
       graphHistory.clear();
-      setManualXRange(null);
+      setTileXRanges({});
     }
   }, [currentMode, graphHistory]);
 
@@ -123,10 +124,18 @@ export function GraphPanel({
 
   const handleDeleteClick = (index: number): void => {
     if (editMode === 'delete') {
+      const deletedTile = layout.tiles[index];
       setLayout((current) => ({
         ...current,
         tiles: current.tiles.filter((_, i) => i !== index),
       }));
+      if (deletedTile != null) {
+        setTileXRanges((current) => {
+          const next = { ...current };
+          delete next[deletedTile.id];
+          return next;
+        });
+      }
       setEditMode('none');
     }
   };
@@ -160,11 +169,11 @@ export function GraphPanel({
 
   const clearHistory = (): void => {
     graphHistory.clear();
-    setManualXRange(null);
+    setTileXRanges({});
   };
 
   const resetXRange = (): void => {
-    setManualXRange(null);
+    setTileXRanges({});
   };
 
   const toggleEditMode = (): void => {
@@ -247,7 +256,7 @@ export function GraphPanel({
           type="button"
           className="graph-panel__text-btn"
           onClick={resetXRange}
-          disabled={manualXRange == null}
+          disabled={!hasCustomXRange}
         >
           Reset Zoom
         </button>
@@ -269,8 +278,20 @@ export function GraphPanel({
               config={tileConfig}
               graphHistory={graphHistory}
               recipeGraphState={visibleRecipeGraphState}
-              manualXRange={manualXRange}
-              onXRangeChange={(min, max) => setManualXRange({ min, max })}
+              xRange={tileXRanges[tileConfig.id] ?? null}
+              onXRangeChange={(min, max) =>
+                setTileXRanges((current) => ({
+                  ...current,
+                  [tileConfig.id]: { min, max },
+                }))
+              }
+              onXRangeReset={() =>
+                setTileXRanges((current) => {
+                  const next = { ...current };
+                  delete next[tileConfig.id];
+                  return next;
+                })
+              }
               onEdit={() => handleEditClick(index)}
               onDelete={() => handleDeleteClick(index)}
               editMode={editMode}
@@ -298,8 +319,9 @@ interface GraphTileWrapperProps {
   config: GraphTileConfig;
   graphHistory: ReturnType<typeof useGraphHistory>;
   recipeGraphState: RecipeGraphState;
-  manualXRange: XRange | null;
+  xRange: XRange | null;
   onXRangeChange: (min: number, max: number) => void;
+  onXRangeReset: () => void;
   onEdit: () => void;
   onDelete: () => void;
   editMode: EditMode;
@@ -309,8 +331,9 @@ function GraphTileWrapper({
   config,
   graphHistory,
   recipeGraphState,
-  manualXRange,
+  xRange,
   onXRangeChange,
+  onXRangeReset,
   onEdit,
   onDelete,
   editMode,
@@ -338,7 +361,7 @@ function GraphTileWrapper({
     config.selectedSeries.includes('temperature_total_profile') &&
     recipeGraphState.profile.length > 0;
   const displayRange =
-    manualXRange ??
+    xRange ??
     (hasProfileSeries ? { min: null, max: null } : graphHistory.xRange);
   const verticalLineX = hasProfileSeries ? recipeGraphState.elapsedSec : null;
   const displayData = useMemo(
@@ -411,6 +434,7 @@ function GraphTileWrapper({
         seriesStyles={config.seriesStyles}
         verticalLineX={verticalLineX}
         onXRangeChange={onXRangeChange}
+        onXRangeReset={onXRangeReset}
       />
     </div>
   );
