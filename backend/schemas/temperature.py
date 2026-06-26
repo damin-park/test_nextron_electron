@@ -49,3 +49,30 @@ class TemperatureManualStartResponse(BaseModel):
     failedStep: Optional[str] = None
     error: Optional[str] = None
     state: Optional[Dict[str, Any]] = None
+
+
+class TemperatureRecipeStepStartRequest(BaseModel):
+    """Recipe step composite command request.
+
+    Recipe 실행 중 한 step을 시작할 때 호출한다. Actor 내부에서
+    write_setpoint → write_ramping_rate → set_run_mode 를 순차 실행한다.
+    """
+
+    recipeRunId: Optional[str] = None
+    cycleIndex: int
+    stepIndex: int
+    setValue: float
+    rampingRate: float
+
+
+class TemperatureRecipeStepStartResponse(BaseModel):
+    ok: bool
+    deviceId: str
+    action: str = "recipe_step_start"
+    recipeRunId: Optional[str] = None
+    cycleIndex: int
+    stepIndex: int
+    steps: List[TemperatureCommandStepResult]
+    failedStep: Optional[str] = None
+    error: Optional[str] = None
+    state: Optional[Dict[str, Any]] = None

@@ -45,13 +45,20 @@ export function normalizeRecipeRows(
   const steps: TemperatureRecipeStep[] = [];
 
   rows.forEach((row, index) => {
+    if (
+      row.tcSetValue.trim().length === 0 ||
+      row.tcRampingRate.trim().length === 0 ||
+      row.hour.trim().length === 0 ||
+      row.minute.trim().length === 0 ||
+      row.second.trim().length === 0
+    ) {
+      return;
+    }
+
     const target = parseFiniteNumber(row.tcSetValue);
     if (target == null) return;
 
-    const rampingRate =
-      row.tcRampingRate.trim().length === 0
-        ? 0
-        : parseFiniteNumber(row.tcRampingRate);
+    const rampingRate = parseFiniteNumber(row.tcRampingRate);
     const hour = parseNonNegativeInt(row.hour);
     const minute = parseNonNegativeInt(row.minute);
     const second = parseNonNegativeInt(row.second);
@@ -69,7 +76,6 @@ export function normalizeRecipeRows(
     }
 
     const holdSec = hour * 3600 + minute * 60 + second;
-    if (holdSec <= 0) return;
 
     steps.push({
       rowId: row.id,

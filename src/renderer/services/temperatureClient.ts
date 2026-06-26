@@ -137,3 +137,36 @@ export function manualStartTemperature(
 ): Promise<ApiCommandResponse> {
   return apiPost<ApiCommandResponse>(tempPath.manualStart(deviceId), body);
 }
+
+export interface TemperatureRecipeStepStartRequest {
+  recipeRunId?: string | null;
+  cycleIndex: number;
+  stepIndex: number;
+  setValue: number;
+  rampingRate: number;
+}
+
+export interface TemperatureRecipeStepStartResponseData {
+  action: string;
+  recipeRunId?: string | null;
+  cycleIndex: number;
+  stepIndex: number;
+  steps: TemperatureCommandStepResult[];
+  failedStep?: string | null;
+  state?: Record<string, unknown> | null;
+}
+
+/**
+ * Recipe step composite command.
+ * Backend Actor가 write_setpoint → write_ramping_rate → set_run_mode를
+ * 순차 실행한다. Frontend는 개별 endpoint를 조합하지 않는다.
+ */
+export function startTemperatureRecipeStep(
+  deviceId: string,
+  payload: TemperatureRecipeStepStartRequest,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(
+    tempPath.recipeStepStart(deviceId),
+    payload,
+  );
+}

@@ -40,8 +40,13 @@ export function MainWindowShell({
     elapsedSec: null,
     running: false,
   });
+  const [graphResetToken, setGraphResetToken] = useState(0);
   const handleRecipeGraphStateChange = useCallback(
     (state: RecipeGraphState) => setRecipeGraphState(state),
+    [],
+  );
+  const handleRecipeStart = useCallback(
+    () => setGraphResetToken((current) => current + 1),
     [],
   );
 
@@ -61,6 +66,7 @@ export function MainWindowShell({
               mode={currentMode}
               temperatureConnection={temperatureConnection}
               onRecipeGraphStateChange={handleRecipeGraphStateChange}
+              onRecipeStart={handleRecipeStart}
               ref={controlPanelRef}
             />
             <div
@@ -69,8 +75,10 @@ export function MainWindowShell({
               onPointerDown={onPointerDown}
             />
             <GraphPanel
+              currentMode={currentMode}
               temperatureState={temperatureConnection.state}
               recipeGraphState={recipeGraphState}
+              resetToken={graphResetToken}
             />
           </div>
         </div>

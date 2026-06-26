@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -31,10 +32,13 @@ import {
 } from './graphLayoutPersistence';
 import { getLayoutGridClass } from './graphUtils';
 import { getIconGlyph } from '../../shared/icons/materialSymbols';
+import type { ControlMode } from '../../shared/types/ui';
 
 interface GraphPanelProps {
+  currentMode: ControlMode;
   temperatureState: TemperatureDeviceState | null;
   recipeGraphState: RecipeGraphState;
+  resetToken: number;
 }
 
 interface XRange {
@@ -44,12 +48,24 @@ interface XRange {
 
 type EditMode = 'none' | 'edit' | 'delete';
 type DialogMode = 'closed' | 'add' | 'edit';
+const EMPTY_RECIPE_GRAPH_STATE: RecipeGraphState = {
+  profile: [],
+  elapsedSec: null,
+  running: false,
+};
 
 export function GraphPanel({
+  currentMode,
   temperatureState,
   recipeGraphState,
+  resetToken,
 }: GraphPanelProps): ReactElement {
-  const graphHistory = useGraphHistory(temperatureState);
+  const recording = currentMode === 'manual' || recipeGraphState.running;
+  const visibleRecipeGraphState =
+    currentMode === 'recipe' ? recipeGraphState : EMPTY_RECIPE_GRAPH_STATE;
+  const graphHistory = useGraphHistory(temperatureState, recording);
+  const lastResetTokenRef = useRef(0);
+  const previousModeRef = useRef<ControlMode>(currentMode);
   const [layout, setLayout] = useState<GraphLayoutConfig>(() => {
     const loaded = loadGraphLayout();
     return loaded ?? DEFAULT_GRAPH_LAYOUT;
@@ -65,6 +81,28 @@ export function GraphPanel({
   useLayoutEffect(() => {
     saveGraphLayout(layout);
   }, [layout]);
+
+  useEffect(() => {
+    if (resetToken <= 0) return;
+    if (lastResetTokenRef.current === resetToken) return;
+    lastResetTokenRef.current = resetToken;
+    graphHistory.clear();
+    setManualXRange(null);
+  }, [graphHistory, resetToken]);
+
+  useEffect(() => {
+    const previousMode = previousModeRef.current;
+    previousModeRef.current = currentMode;
+    if (previousMode === 'recipe' && currentMode === 'manual') {
+      graphHistory.clear();
+      setManualXRange(null);
+      return;
+    }
+    if (previousMode === 'manual' && currentMode === 'recipe') {
+      graphHistory.clear();
+      setManualXRange(null);
+    }
+  }, [currentMode, graphHistory]);
 
   const handleAddGraph = (): void => {
     if (layout.tiles.length >= 6) {
@@ -230,7 +268,7 @@ export function GraphPanel({
               key={tileConfig.id}
               config={tileConfig}
               graphHistory={graphHistory}
-              recipeGraphState={recipeGraphState}
+              recipeGraphState={visibleRecipeGraphState}
               manualXRange={manualXRange}
               onXRangeChange={(min, max) => setManualXRange({ min, max })}
               onEdit={() => handleEditClick(index)}
@@ -296,7 +334,13 @@ function GraphTileWrapper({
     return () => observer.disconnect();
   }, []);
 
-  const displayRange = manualXRange ?? graphHistory.xRange;
+  const hasProfileSeries =
+    config.selectedSeries.includes('temperature_total_profile') &&
+    recipeGraphState.profile.length > 0;
+  const displayRange =
+    manualXRange ??
+    (hasProfileSeries ? { min: null, max: null } : graphHistory.xRange);
+  const verticalLineX = hasProfileSeries ? recipeGraphState.elapsedSec : null;
   const displayData = useMemo(
     () => {
       const data = graphHistory.getDisplayData(
@@ -365,7 +409,7 @@ function GraphTileWrapper({
         series={seriesDefinitions}
         data={displayData}
         seriesStyles={config.seriesStyles}
-        verticalLineX={recipeGraphState.elapsedSec}
+        verticalLineX={verticalLineX}
         onXRangeChange={onXRangeChange}
       />
     </div>
@@ -403,11 +447,49 @@ function mergeRecipeProfileData(
     if (key === 'temperature_total_profile') {
       return alignedX.map((x) => interpolateRecipeProfile(profile, x));
     }
+    const existingY = data[seriesIndex + 1] ?? [];
     const existingMap = existingMaps[seriesIndex];
-    return alignedX.map((x) => existingMap.get(x) ?? null);
+    return alignedX.map(
+      (x) =>
+        existingMap.get(x) ?? interpolateGraphSeries(existingX, existingY, x),
+    );
   });
 
   return [alignedX, ...ySeries];
+}
+
+function interpolateGraphSeries(
+  xValues: readonly number[],
+  yValues: readonly GraphSeriesValue[],
+  x: number,
+): GraphSeriesValue {
+  const count = Math.min(xValues.length, yValues.length);
+  if (count === 0) return null;
+
+  let previousX: number | null = null;
+  let previousY: number | null = null;
+
+  for (let index = 0; index < count; index += 1) {
+    const currentX = xValues[index];
+    const currentY = yValues[index];
+    if (!Number.isFinite(currentX)) continue;
+    if (currentY == null || !Number.isFinite(currentY)) continue;
+
+    if (Math.abs(currentX - x) < 0.000001) {
+      return currentY;
+    }
+    if (currentX > x) {
+      if (previousX == null || previousY == null) return null;
+      if (Math.abs(currentX - previousX) < 0.000001) return currentY;
+      const ratio = (x - previousX) / (currentX - previousX);
+      return previousY + (currentY - previousY) * ratio;
+    }
+
+    previousX = currentX;
+    previousY = currentY;
+  }
+
+  return null;
 }
 
 function sampleRecipeProfileX(

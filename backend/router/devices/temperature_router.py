@@ -27,6 +27,7 @@ from backend.schemas.temperature import (
     TemperatureManualStartRequest,
     TemperaturePollingStartRequest,
     TemperatureRampingRateRequest,
+    TemperatureRecipeStepStartRequest,
     TemperatureSetpointRequest,
 )
 from backend.services.temperature_service import TemperatureService
@@ -103,6 +104,20 @@ async def manual_start(
 ) -> ApiCommandResponse:
     svc: TemperatureService = request.app.state.temperature_service
     result = await svc.manual_start(device_id=device_id, request=body)
+    return to_api_response(result)
+
+
+@router.post("/{device_id}/recipe/step/start", response_model=ApiCommandResponse)
+async def recipe_step_start(
+    device_id: str, body: TemperatureRecipeStepStartRequest, request: Request
+) -> ApiCommandResponse:
+    """Recipe step composite command.
+
+    Actor 내부에서 write_setpoint → write_ramping_rate → set_run_mode를
+    순차 실행한다. 실패 시 failedStep/steps/error를 반환한다.
+    """
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.recipe_step_start(device_id=device_id, request=body)
     return to_api_response(result)
 
 

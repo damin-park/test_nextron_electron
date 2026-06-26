@@ -50,8 +50,15 @@ export interface RecipeGraphState {
 
 export interface RecipeRunState {
   running: boolean;
+  status: RecipeRunStatus;
   currentCycle: number;
   currentStepIndex: number;
   elapsedSec: number;
   startedAt: number | null;
 }
+
+export type RecipeRunStatus =
+  | 'idle'
+  | 'starting'
+  | 'running'
+  | 'error';

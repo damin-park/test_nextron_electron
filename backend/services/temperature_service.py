@@ -22,6 +22,7 @@ from backend.schemas.temperature import (
     TemperatureConnectRequest,
     TemperatureManualStartRequest,
     TemperaturePollingStartRequest,
+    TemperatureRecipeStepStartRequest,
 )
 from backend.state.state_manager import StateManager
 
@@ -240,6 +241,28 @@ class TemperatureService:
             response_mode=ResponseMode.WAIT,
             timeout_sec=20.0,
             context={"origin": "gui"},
+        )
+        future = self._actor.submit(command)
+        return await self._await(future, command.command_id, device_id, command.timeout_sec)
+
+    async def recipe_step_start(
+        self, device_id: str, request: TemperatureRecipeStepStartRequest
+    ) -> CommandResult:
+        command = DeviceCommand(
+            device_id=device_id,
+            device_type="temperature",
+            queue_type=CommandQueueType.CONTROL,
+            action="recipe_step_start",
+            payload={
+                "recipeRunId": request.recipeRunId,
+                "cycleIndex": request.cycleIndex,
+                "stepIndex": request.stepIndex,
+                "setValue": request.setValue,
+                "rampingRate": request.rampingRate,
+            },
+            response_mode=ResponseMode.WAIT,
+            timeout_sec=20.0,
+            context={"origin": "recipe"},
         )
         future = self._actor.submit(command)
         return await self._await(future, command.command_id, device_id, command.timeout_sec)

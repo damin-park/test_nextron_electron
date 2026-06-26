@@ -19,5 +19,7 @@ export const tempPath = {
   run: (id: string) => `${DEVICES_BASE}/temperature/${id}/run`,
   stop: (id: string) => `${DEVICES_BASE}/temperature/${id}/stop`,
   manualStart: (id: string) => `${DEVICES_BASE}/temperature/${id}/manual/start`,
+  recipeStepStart: (id: string) =>
+    `${DEVICES_BASE}/temperature/${id}/recipe/step/start`,
   state: (id: string) => `${DEVICES_BASE}/temperature/${id}/state`,
 };

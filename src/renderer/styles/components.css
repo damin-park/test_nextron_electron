@@ -1547,18 +1547,57 @@
 }
 
 .recipe-profile-preview {
-  height: 142px;
+  min-height: 142px;
   border: 1px solid var(--md3-outline-variant);
   border-width: 0;
   border-radius: 0;
   background: #151515;
   overflow: hidden;
+  user-select: none;
 }
 
 .recipe-profile-preview svg {
   width: 100%;
   height: 100%;
   display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.recipe-profile-preview svg:active {
+  cursor: grabbing;
+}
+
+.recipe-profile-resize-handle {
+  flex: 0 0 8px;
+  height: 8px;
+  border: 0;
+  border-top: 1px solid #242424;
+  border-radius: 0;
+  background: #121212;
+  cursor: row-resize;
+  padding: 0;
+}
+
+.recipe-profile-resize-handle:hover,
+.recipe-profile-resize-handle:active {
+  background: #242424;
+}
+
+.recipe-profile-resize-handle::before {
+  content: '';
+  display: block;
+  width: 34px;
+  height: 2px;
+  margin: 3px auto 0;
+  border-radius: 1px;
+  background: #4a4a4a;
+}
+
+.recipe-profile-grid {
+  stroke: #2a2a2a;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
 }
 
 .recipe-profile-axis {
@@ -1572,17 +1611,29 @@
   stroke-width: 2;
 }
 
-.recipe-profile-label {
-  fill: var(--md3-on-surface);
-  font-size: 11px;
-  font-family: var(--font-medium);
+.recipe-profile-time-line {
+  stroke: #ffb02e;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
 }
 
-.recipe-profile-unit,
+.recipe-profile-axis-label,
+.recipe-profile-tick,
+.recipe-profile-time-label,
 .recipe-profile-empty {
   fill: var(--md3-on-surface-variant);
   font-size: 10px;
   font-family: var(--font-base);
+}
+
+.recipe-profile-axis-label {
+  font-family: var(--font-medium);
+}
+
+.recipe-profile-time-label {
+  fill: #ffb02e;
+  font-family: var(--font-medium);
+  font-size: 9px;
 }
 
 .recipe-table-wrap {
@@ -1628,32 +1679,24 @@
   display: block;
 }
 
-.recipe-table th:first-child,
-.recipe-table td:first-child {
+.recipe-table .recipe-table__idx-col,
+.recipe-table .recipe-table__idx {
   width: 40px;
 }
 
-.recipe-table th:nth-child(2),
-.recipe-table td:nth-child(2) {
+.recipe-table .recipe-table__target-col {
   width: 118px;
 }
 
-.recipe-table th:nth-child(3),
-.recipe-table td:nth-child(3) {
+.recipe-table .recipe-table__ramping-col {
   width: 92px;
 }
 
-.recipe-table th:nth-child(4),
-.recipe-table td:nth-child(4),
-.recipe-table th:nth-child(5),
-.recipe-table td:nth-child(5),
-.recipe-table th:nth-child(6),
-.recipe-table td:nth-child(6) {
+.recipe-table .recipe-table__time-col {
   width: 58px;
 }
 
-.recipe-table th:nth-child(7),
-.recipe-table td:nth-child(7) {
+.recipe-table .recipe-table__action-col {
   width: 30px;
 }
 

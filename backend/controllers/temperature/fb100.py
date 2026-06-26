@@ -104,11 +104,6 @@ class FB100:
                     command_id=command.command_id,
                     ok=True,
                     device_id=command.device_id,
-                    data={
-                        "sv": value,
-                        "targetSetpoint": value,
-                        "unit": "C",
-                    },
                 )
 
             if action == "write_ramping_rate":

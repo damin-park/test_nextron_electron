@@ -34,11 +34,12 @@ export interface ControlPanelProps {
   mode: ControlMode;
   temperatureConnection: UseTemperatureConnectionResult;
   onRecipeGraphStateChange: (state: RecipeGraphState) => void;
+  onRecipeStart: () => void;
 }
 
 export const ControlPanel = forwardRef<HTMLDivElement, ControlPanelProps>(
   function ControlPanel(
-    { mode, temperatureConnection, onRecipeGraphStateChange },
+    { mode, temperatureConnection, onRecipeGraphStateChange, onRecipeStart },
     ref,
   ) {
     return (
@@ -56,6 +57,7 @@ export const ControlPanel = forwardRef<HTMLDivElement, ControlPanelProps>(
               <RecipePanel
                 temperatureConnection={temperatureConnection}
                 onGraphStateChange={onRecipeGraphStateChange}
+                onRecipeStart={onRecipeStart}
               />
             ) : (
               <div className="control-panel__placeholder">

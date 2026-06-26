@@ -67,8 +67,15 @@ const createWindow = () => {
     );
   }
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const isDevToolsShortcut =
+      input.key === 'F12' ||
+      (input.control && input.shift && input.key.toLowerCase() === 'i');
+    if (!isDevToolsShortcut) return;
+
+    event.preventDefault();
+    mainWindow?.webContents.toggleDevTools();
+  });
 
   return mainWindow;
 };
