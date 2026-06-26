@@ -6,10 +6,11 @@ import {
 } from 'react';
 import type { ApiCommandResponse } from '../../services/deviceTypes';
 import {
-  setTemperatureRunMode,
+  manualStartTemperature,
   setTemperatureStopMode,
   writeTemperatureRampingRate,
   writeTemperatureSetpoint,
+  type TemperatureManualStartResponseData,
 } from '../../services/temperatureClient';
 import type { UseTemperatureConnectionResult } from '../temperature/useTemperatureConnection';
 
@@ -112,11 +113,31 @@ export function ManualTemperatureControl({
     if (targetValue == null) return;
     const rampValue = parseInput(rampingRate, 'Ramping Rate');
     if (rampValue == null) return;
-    const setOk = await commitSetValue(true);
-    if (!setOk) return;
-    const rampOk = await commitRampingRate(true);
-    if (!rampOk) return;
-    await runCommand('On', () => setTemperatureRunMode('temperature-1'));
+
+    if (!connected || busy) return;
+    setPendingCommand('On');
+    setMessage(null);
+    try {
+      const response = await manualStartTemperature('temperature-1', {
+        setValue: targetValue,
+        rampingRate: rampValue,
+      });
+      if (response.status === 'error') {
+        const detail = (response.data as TemperatureManualStartResponseData | undefined);
+        const failedStep = detail?.failedStep;
+        const errMsg = response.error ?? 'manual start failed';
+        setMessage(failedStep ? `Failed at ${failedStep}: ${errMsg}` : errMsg);
+      } else {
+        lastSubmittedSetValueRef.current = setValue.trim();
+        lastSubmittedRampingRateRef.current = rampingRate.trim();
+        setMessage('Temperature control started');
+        await refreshState();
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPendingCommand(null);
+    }
   };
 
   const handleStop = (): Promise<boolean> =>
@@ -172,7 +193,9 @@ export function ManualTemperatureControl({
       <div className="manual-actions">
         <button
           type="button"
-          className="manual-actions__button"
+          className={`manual-actions__button${
+            runModeOn ? ' manual-actions__button--on-active' : ''
+          }`}
           disabled={!connected || busy}
           onClick={() => void handleRun()}
         >
@@ -180,7 +203,9 @@ export function ManualTemperatureControl({
         </button>
         <button
           type="button"
-          className="manual-actions__button"
+          className={`manual-actions__button${
+            !runModeOn ? ' manual-actions__button--off-active' : ''
+          }`}
           disabled={!connected || busy}
           onClick={() => void handleStop()}
         >

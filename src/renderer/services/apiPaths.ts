@@ -18,5 +18,6 @@ export const tempPath = {
     `${DEVICES_BASE}/temperature/${id}/ramping-rate`,
   run: (id: string) => `${DEVICES_BASE}/temperature/${id}/run`,
   stop: (id: string) => `${DEVICES_BASE}/temperature/${id}/stop`,
+  manualStart: (id: string) => `${DEVICES_BASE}/temperature/${id}/manual/start`,
   state: (id: string) => `${DEVICES_BASE}/temperature/${id}/state`,
 };

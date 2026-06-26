@@ -24,6 +24,7 @@ from fastapi import APIRouter, HTTPException, Request
 from backend.managers.device_registry import DeviceRegistryManager
 from backend.managers.device_mode import get_device_mode
 from backend.schemas.device import (
+    DeviceType,
     RegisterDeviceRequest,
     RegisteredDevice,
     RegisteredDevicesSummary,
@@ -73,6 +74,67 @@ def get_registered() -> dict:
 def register_device(request: RegisterDeviceRequest) -> RegisteredDevice:
     registry = DeviceRegistryManager.instance()
     return registry.register(request)
+
+
+@router.post("/registered/connect")
+async def connect_registered_devices(request: Request) -> dict:
+    """Connect enabled registered devices using their saved connection config."""
+    registry = DeviceRegistryManager.instance()
+    devices = registry.list_devices()
+    results: list[dict] = []
+
+    for device in devices:
+        result: dict = {
+            "deviceId": device.id,
+            "deviceType": device.type.value,
+            "displayName": device.displayName,
+            "status": "skipped",
+            "connected": False,
+            "error": None,
+        }
+
+        if not device.enabled:
+            result["error"] = "device is disabled"
+            results.append(result)
+            continue
+
+        if device.connection is None:
+            result["error"] = "connection config is not registered"
+            results.append(result)
+            continue
+
+        if device.type != DeviceType.TEMPERATURE:
+            result["error"] = "auto-connect is not implemented for this device type"
+            results.append(result)
+            continue
+
+        svc: TemperatureService = request.app.state.temperature_service
+        command_result = await svc.connect(
+            device.id,
+            CommandTemperatureConnectRequest(
+                port=device.connection.port,
+                baudrate=device.connection.baudrate,
+                timeoutSec=device.connection.timeoutMs / 1000.0,
+                model=device.model,
+            ),
+        )
+        result.update(
+            {
+                "status": "ok" if command_result.ok else "error",
+                "connected": command_result.ok,
+                "error": command_result.error,
+            }
+        )
+        results.append(result)
+
+    attempted = sum(1 for item in results if item["status"] != "skipped")
+    connected = sum(1 for item in results if item["connected"])
+    return {
+        "status": "ok",
+        "attempted": attempted,
+        "connected": connected,
+        "devices": results,
+    }
 
 
 @router.delete("/{device_id}")

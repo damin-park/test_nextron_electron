@@ -20,6 +20,7 @@ from backend.schemas.command import (
 )
 from backend.schemas.temperature import (
     TemperatureConnectRequest,
+    TemperatureManualStartRequest,
     TemperaturePollingStartRequest,
 )
 from backend.state.state_manager import StateManager
@@ -223,3 +224,22 @@ class TemperatureService:
             device_id=device_id,
             data=state,
         )
+
+    async def manual_start(
+        self, device_id: str, request: TemperatureManualStartRequest
+    ) -> CommandResult:
+        command = DeviceCommand(
+            device_id=device_id,
+            device_type="temperature",
+            queue_type=CommandQueueType.CONTROL,
+            action="manual_start",
+            payload={
+                "setValue": request.setValue,
+                "rampingRate": request.rampingRate,
+            },
+            response_mode=ResponseMode.WAIT,
+            timeout_sec=20.0,
+            context={"origin": "gui"},
+        )
+        future = self._actor.submit(command)
+        return await self._await(future, command.command_id, device_id, command.timeout_sec)

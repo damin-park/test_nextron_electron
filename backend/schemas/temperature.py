@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -28,3 +28,24 @@ class TemperatureConnectRequest(BaseModel):
 
 class TemperaturePollingStartRequest(BaseModel):
     intervalSec: float = 1.0
+
+
+class TemperatureManualStartRequest(BaseModel):
+    setValue: float
+    rampingRate: float
+
+
+class TemperatureCommandStepResult(BaseModel):
+    action: str
+    ok: bool
+    error: Optional[str] = None
+
+
+class TemperatureManualStartResponse(BaseModel):
+    ok: bool
+    deviceId: str
+    action: str = "manual_start"
+    steps: List[TemperatureCommandStepResult]
+    failedStep: Optional[str] = None
+    error: Optional[str] = None
+    state: Optional[Dict[str, Any]] = None

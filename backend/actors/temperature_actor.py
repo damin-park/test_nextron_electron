@@ -145,10 +145,19 @@ class TemperatureActor:
             )
 
         if result.ok and result.data:
-            self._state_manager.update_temperature_state(
-                command.device_id,
-                {**result.data, "error": None, "lastCommandId": command.command_id},
-            )
+            if command.action == "manual_start":
+                # manual_start는 내부에서 이미 step별 state 업데이트를 수행했다.
+                # result.data의 composite 응답 필드(steps/action/state)를
+                # device state에 병합하지 않고 lastCommandId만 기록한다.
+                self._state_manager.update_temperature_state(
+                    command.device_id,
+                    {"error": None, "lastCommandId": command.command_id},
+                )
+            else:
+                self._state_manager.update_temperature_state(
+                    command.device_id,
+                    {**result.data, "error": None, "lastCommandId": command.command_id},
+                )
         elif not result.ok and result.error:
             self._state_manager.update_temperature_state(
                 command.device_id,
@@ -183,6 +192,8 @@ class TemperatureActor:
             return self._run_control(command)
         if action == "write_ramping_rate":
             return self._run_write_ramping_rate(command)
+        if action == "manual_start":
+            return self._run_manual_start(command)
         return CommandResult(
             command_id=command.command_id,
             ok=False,
@@ -280,6 +291,128 @@ class TemperatureActor:
         )
         responses = [self._transport.transaction(tx) for tx in write_transactions]
         return self._controller.parse_result(command, responses)
+
+    def _run_manual_start(self, command: DeviceCommand) -> CommandResult:
+        """Composite command: write_setpoint → write_ramping_rate → set_run_mode.
+
+        Runs all steps sequentially inside the worker. Stops on first failure.
+        Returns a CommandResult whose data contains the composite response fields.
+        """
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature device is not connected",
+            )
+
+        set_value: float = float(command.payload["setValue"])
+        ramping_rate: float = float(command.payload["rampingRate"])
+
+        steps: list[dict[str, Any]] = []
+
+        # ── Step 1: write_setpoint ────────────────────────────────────────
+        sp_cmd = DeviceCommand(
+            device_id=command.device_id,
+            device_type=command.device_type,
+            queue_type=command.queue_type,
+            action="write_setpoint",
+            payload={"value": set_value},
+            response_mode=command.response_mode,
+            context={"origin": "manual_start"},
+        )
+        sp_result = self._run_control(sp_cmd)
+        steps.append({"action": "write_setpoint", "ok": sp_result.ok, "error": sp_result.error})
+        if sp_result.ok and sp_result.data:
+            self._state_manager.update_temperature_state(
+                command.device_id,
+                {**sp_result.data, "error": None},
+            )
+        if not sp_result.ok:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error=f"write_setpoint failed: {sp_result.error}",
+                data={
+                    "action": "manual_start",
+                    "failedStep": "write_setpoint",
+                    "steps": steps,
+                },
+            )
+
+        # ── Step 2: write_ramping_rate ────────────────────────────────────
+        rr_cmd = DeviceCommand(
+            device_id=command.device_id,
+            device_type=command.device_type,
+            queue_type=command.queue_type,
+            action="write_ramping_rate",
+            payload={"value": ramping_rate},
+            response_mode=command.response_mode,
+            context={"origin": "manual_start"},
+        )
+        rr_result = self._run_write_ramping_rate(rr_cmd)
+        steps.append({"action": "write_ramping_rate", "ok": rr_result.ok, "error": rr_result.error})
+        if rr_result.ok and rr_result.data:
+            self._state_manager.update_temperature_state(
+                command.device_id,
+                {**rr_result.data, "error": None},
+            )
+        if not rr_result.ok:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error=f"write_ramping_rate failed: {rr_result.error}",
+                data={
+                    "action": "manual_start",
+                    "failedStep": "write_ramping_rate",
+                    "steps": steps,
+                },
+            )
+
+        # ── Step 3: set_run_mode ──────────────────────────────────────────
+        run_cmd = DeviceCommand(
+            device_id=command.device_id,
+            device_type=command.device_type,
+            queue_type=command.queue_type,
+            action="set_run_mode",
+            payload={},
+            response_mode=command.response_mode,
+            context={"origin": "manual_start"},
+        )
+        run_result = self._run_control(run_cmd)
+        steps.append({"action": "set_run_mode", "ok": run_result.ok, "error": run_result.error})
+        if run_result.ok and run_result.data:
+            self._state_manager.update_temperature_state(
+                command.device_id,
+                {**run_result.data, "error": None},
+            )
+        if not run_result.ok:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error=f"set_run_mode failed: {run_result.error}",
+                data={
+                    "action": "manual_start",
+                    "failedStep": "set_run_mode",
+                    "steps": steps,
+                },
+            )
+
+        # ── All steps succeeded ───────────────────────────────────────────
+        final_state = self._state_manager.get_temperature_state(command.device_id) or {}
+        return CommandResult(
+            command_id=command.command_id,
+            ok=True,
+            device_id=command.device_id,
+            data={
+                "action": "manual_start",
+                "steps": steps,
+                "state": final_state,
+            },
+        )
 
     def _run_transactions(self, command: DeviceCommand) -> list[TransportResponse]:
         transactions = self._controller.build_transactions(command)

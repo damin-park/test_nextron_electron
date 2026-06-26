@@ -1306,6 +1306,28 @@
   color: var(--md3-on-surface);
 }
 
+.manual-actions__button--on-active:not(:disabled) {
+  border-color: rgba(52, 199, 89, 0.75);
+  background: rgba(52, 199, 89, 0.22);
+  color: #70d88b;
+}
+
+.manual-actions__button--on-active:hover:not(:disabled) {
+  background: rgba(52, 199, 89, 0.3);
+  color: #8ef0a5;
+}
+
+.manual-actions__button--off-active:not(:disabled) {
+  border-color: rgba(230, 35, 28, 0.75);
+  background: rgba(230, 35, 28, 0.18);
+  color: #ff8a8a;
+}
+
+.manual-actions__button--off-active:hover:not(:disabled) {
+  background: rgba(230, 35, 28, 0.26);
+  color: #ffb0b0;
+}
+
 .manual-actions__button:disabled {
   opacity: 0.38;
   cursor: not-allowed;

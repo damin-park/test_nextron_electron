@@ -323,10 +323,63 @@ const httpGetJson = <T>(url: string): Promise<T | undefined> =>
     });
   });
 
+const httpPostJson = <T>(url: string, timeoutMs = 15000): Promise<T | undefined> =>
+  new Promise((resolve) => {
+    const request = http.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Length': '0',
+        },
+      },
+      (response) => {
+        if (response.statusCode !== 200) {
+          response.resume();
+          resolve(undefined);
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8')) as T);
+          } catch {
+            resolve(undefined);
+          }
+        });
+      },
+    );
+
+    request.on('error', () => resolve(undefined));
+    request.setTimeout(timeoutMs, () => {
+      request.destroy();
+      resolve(undefined);
+    });
+    request.end();
+  });
+
 interface RegisteredDevicesSummary {
   hasRegisteredDevices: boolean;
   count: number;
   devices: Array<{ id: string; type: string; displayName: string; enabled: boolean }>;
+}
+
+interface RegisteredDeviceConnectResult {
+  deviceId: string;
+  deviceType: string;
+  displayName: string;
+  status: 'ok' | 'error' | 'skipped';
+  connected: boolean;
+  error: string | null;
+}
+
+interface RegisteredDevicesConnectResponse {
+  status: 'ok';
+  attempted: number;
+  connected: number;
+  devices: RegisteredDeviceConnectResult[];
 }
 
 /**
@@ -341,4 +394,14 @@ export const getRegisteredDevicesSummary =
     );
 
     return summary ?? { hasRegisteredDevices: false, count: 0, devices: [] };
+  };
+
+export const connectRegisteredDevices =
+  async (): Promise<RegisteredDevicesConnectResponse> => {
+    const { url } = getBackendInfo();
+    const result = await httpPostJson<RegisteredDevicesConnectResponse>(
+      `${url}/api/devices/registered/connect`,
+    );
+
+    return result ?? { status: 'ok', attempted: 0, connected: 0, devices: [] };
   };

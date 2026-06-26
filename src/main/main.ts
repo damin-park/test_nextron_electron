@@ -3,6 +3,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import {
   checkBackendHealth,
+  connectRegisteredDevices,
   getBackendConnection,
   getBackendInfo,
   getBackendStatus,
@@ -144,6 +145,19 @@ app.on('ready', async () => {
   const summary = await getRegisteredDevicesSummary();
 
   if (summary.hasRegisteredDevices) {
+    setSplashStatus('Connecting registered devices...');
+    const connectResult = await connectRegisteredDevices();
+    console.log(
+      `Registered device auto-connect: attempted=${connectResult.attempted} connected=${connectResult.connected}`,
+    );
+    connectResult.devices
+      .filter((device) => device.status === 'error')
+      .forEach((device) => {
+        console.warn(
+          `Auto-connect failed: deviceId=${device.deviceId} type=${device.deviceType} error=${device.error ?? 'unknown'}`,
+        );
+      });
+
     // 등록 장비 있음 → 바로 Main Window
     setSplashStatus('Loading Main Screen...');
     showMainWindow(splashShownAt);

@@ -112,3 +112,28 @@ export function setTemperatureStopMode(
 ): Promise<ApiCommandResponse> {
   return apiPost<ApiCommandResponse>(tempPath.stop(deviceId));
 }
+
+export interface TemperatureManualStartRequest {
+  setValue: number;
+  rampingRate: number;
+}
+
+export interface TemperatureCommandStepResult {
+  action: string;
+  ok: boolean;
+  error?: string | null;
+}
+
+export interface TemperatureManualStartResponseData {
+  action: string;
+  steps: TemperatureCommandStepResult[];
+  failedStep?: string | null;
+  state?: Record<string, unknown> | null;
+}
+
+export function manualStartTemperature(
+  deviceId: string,
+  body: TemperatureManualStartRequest,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.manualStart(deviceId), body);
+}

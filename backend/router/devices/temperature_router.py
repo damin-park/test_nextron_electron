@@ -24,6 +24,7 @@ from fastapi import APIRouter, Request
 from backend.schemas.common_response import ApiCommandResponse, to_api_response
 from backend.schemas.temperature import (
     TemperatureConnectRequest,
+    TemperatureManualStartRequest,
     TemperaturePollingStartRequest,
     TemperatureRampingRateRequest,
     TemperatureSetpointRequest,
@@ -93,6 +94,15 @@ async def run(device_id: str, request: Request) -> ApiCommandResponse:
 async def stop(device_id: str, request: Request) -> ApiCommandResponse:
     svc: TemperatureService = request.app.state.temperature_service
     result = await svc.set_stop_mode(device_id=device_id)
+    return to_api_response(result)
+
+
+@router.post("/{device_id}/manual/start", response_model=ApiCommandResponse)
+async def manual_start(
+    device_id: str, body: TemperatureManualStartRequest, request: Request
+) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.manual_start(device_id=device_id, request=body)
     return to_api_response(result)
 
 
