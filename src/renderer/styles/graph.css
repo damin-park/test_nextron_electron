@@ -275,7 +275,7 @@
   border: 1px solid var(--outline);
   border-radius: 6px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.85);
-  width: 940px;
+  width: 1040px;
   height: 600px;
   max-width: 95vw;
   max-height: 90vh;
@@ -391,15 +391,10 @@
 .gs-dialog__top-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--outline-variant);
 }
 
 .gs-axis-panel {
   padding: 10px 14px;
-}
-
-.gs-axis-panel:first-child {
-  border-right: 1px solid var(--outline-variant);
 }
 
 .gs-axis-panel__title {
@@ -453,8 +448,9 @@
 
 /* Mid row: Data List | Plots */
 .gs-dialog__mid-row {
+  --gs-series-list-width: 160px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.25fr);
   flex: 1;
   min-height: 240px;
 }
@@ -464,10 +460,6 @@
   flex-direction: column;
   padding: 10px 14px;
   overflow: hidden;
-}
-
-.gs-panel:first-child {
-  border-right: 1px solid var(--outline-variant);
 }
 
 .gs-panel__title {
@@ -489,7 +481,8 @@
 
 /* Listbox container */
 .gs-listbox-wrap {
-  flex: 1;
+  flex: 0 0 var(--gs-series-list-width);
+  width: var(--gs-series-list-width);
   border: 1px solid var(--outline-variant);
   border-radius: 3px;
   overflow-y: auto;

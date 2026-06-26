@@ -7,7 +7,7 @@
  * - 백엔드 로딩 동안 표시되고, 메인 윈도우가 준비되면 닫힌다.
  */
 import { BrowserWindow } from 'electron';
-import { SPLASH_BAR_DATA_URI, SPLASH_LOGO_DATA_URI } from './splash-assets';
+import { SPLASH_LOGO_DATA_URI } from './splash-assets';
 import { APP_VERSION } from '../shared/app-version';
 
 const COPYRIGHT = '\u00A9 2026 Nextron. All rights reserved.';
@@ -65,8 +65,28 @@ const buildSplashHtml = (): string => `<!doctype html>
         right: 0;
         bottom: 33px;
         width: 100%;
-        height: auto;
-        display: block;
+        height: 6px;
+        overflow: hidden;
+        background:
+          linear-gradient(
+            90deg,
+            #000000 0%,
+            #e6231c 32%,
+            #e6231c 50%,
+            #000000 68%,
+            #000000 100%
+          );
+        background-size: 220% 100%;
+        animation: splash-bar-flow 2.8s linear infinite;
+        box-shadow: 0 0 12px rgba(230, 35, 28, 0.45);
+      }
+      @keyframes splash-bar-flow {
+        from {
+          background-position: 220% 0;
+        }
+        to {
+          background-position: 0 0;
+        }
       }
       .splash__copyright {
         position: absolute;
@@ -86,7 +106,7 @@ const buildSplashHtml = (): string => `<!doctype html>
         <img class="splash__logo" src="${SPLASH_LOGO_DATA_URI}" alt="NEXTRON" />
         <span class="splash__status" id="status">Initializing...</span>
       </div>
-      <img class="splash__bar" src="${SPLASH_BAR_DATA_URI}" alt="" />
+      <div class="splash__bar" aria-hidden="true"></div>
       <span class="splash__copyright">${COPYRIGHT}</span>
     </div>
   </body>
