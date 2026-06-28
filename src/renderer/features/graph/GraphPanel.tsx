@@ -420,7 +420,7 @@ function GraphTileWrapper({
 
   return (
     <div
-      className={`graph-tile ${editMode === 'edit' || editMode === 'delete' ? 'graph-tile--selectable' : ''}`}
+      className={`graph-tile-wrapper${editMode === 'edit' || editMode === 'delete' ? ' graph-tile-wrapper--selectable' : ''}`}
       ref={containerRef}
       onClick={handleTileClick}
       onKeyDown={handleTileKeyDown}

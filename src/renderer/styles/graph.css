@@ -142,7 +142,7 @@
   gap: 8px;
   padding: 8px;
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   min-height: 0;
 }
 
@@ -155,22 +155,22 @@
 /* Tkinter LAYOUT_PRESETS mirrored as CSS grid */
 .graph-panel__tiles--1x1 {
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
+  grid-template-rows: minmax(260px, 1fr);
 }
 
 .graph-panel__tiles--1x2 {
   grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: 1fr;
+  grid-template-rows: minmax(260px, 1fr);
 }
 
 .graph-panel__tiles--2x2 {
   grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-rows: repeat(2, minmax(260px, 1fr));
 }
 
 .graph-panel__tiles--2x3 {
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-rows: repeat(2, minmax(260px, 1fr));
 }
 
 /* Empty state */
@@ -194,9 +194,22 @@
    Tkinter _GraphTile: matplotlib canvas, overlay buttons
    ───────────────────────────────────────── */
 
+.graph-tile-wrapper {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.graph-tile-wrapper--selectable {
+  cursor: pointer;
+}
+
 .graph-tile {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   background-color: var(--container);
   border: 1px solid var(--outline-variant);
   border-radius: 3px;
@@ -205,7 +218,8 @@
 }
 
 /* Hover feedback when edit/delete mode is active */
-.graph-tile--selectable:hover {
+.graph-tile--selectable:hover,
+.graph-tile-wrapper--selectable:hover > .graph-tile {
   border-color: #FFC857;
   cursor: pointer;
 }
@@ -242,9 +256,37 @@
 }
 
 .graph-tile__plot {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  height: auto;
+  width: 100%;
   overflow: hidden;
   min-height: 0;
+}
+
+.graph-tile__canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.graph-tile__legend {
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 6px 4px;
+  background-color: #151515;
+  overflow: visible;
+}
+
+.graph-tile__legend .u-legend {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.graph-tile__legend .u-series > * {
+  padding: 2px 4px;
 }
 
 .graph-tile .u-cursor-pt {

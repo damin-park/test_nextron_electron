@@ -23,6 +23,7 @@ export interface UPlotGraphTileProps {
   data: GraphDisplayData;
   /** Optional per-series style overrides (color / width / line style) */
   seriesStyles?: Partial<Record<GraphSeriesKey, SeriesPlotStyle>>;
+  /** Optional fixed plot height. When omitted, the tile uses its available height. */
   height?: number;
   verticalLineX?: number | null;
   onXRangeChange?: (min: number, max: number) => void;
@@ -49,7 +50,7 @@ export function UPlotGraphTile({
   series,
   data,
   seriesStyles,
-  height = 320,
+  height,
   verticalLineX,
   onXRangeChange,
   onXRangeReset,
@@ -58,11 +59,12 @@ export function UPlotGraphTile({
 }: UPlotGraphTileProps): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const plotHostRef = useRef<HTMLDivElement | null>(null);
+  const legendHostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
   const onXRangeChangeRef = useRef(onXRangeChange);
   const verticalLineXRef = useRef(verticalLineX);
   const seriesVisibilityRef = useRef<Partial<Record<GraphSeriesKey, boolean>>>({});
-  const [size, setSize] = useState<PlotSize>({ width: 0, height });
+  const [size, setSize] = useState<PlotSize>({ width: 0, height: height ?? 0 });
 
   const unitLabel = useMemo(
     () =>
@@ -95,36 +97,47 @@ export function UPlotGraphTile({
 
   useLayoutEffect(() => {
     const container = containerRef.current;
+    const plotHost = plotHostRef.current;
     if (container == null) return undefined;
 
     const updateSize = (): void => {
-      const rect = container.getBoundingClientRect();
+      const rect = (plotHost ?? container).getBoundingClientRect();
       setSize({
         width: Math.max(0, Math.floor(rect.width)),
-        height,
+        height: Math.max(0, Math.floor(height ?? rect.height)),
       });
     };
 
     updateSize();
     const observer = new ResizeObserver(updateSize);
     observer.observe(container);
+    if (plotHost != null) observer.observe(plotHost);
 
     return () => observer.disconnect();
   }, [height]);
 
   useEffect(() => {
     const host = plotHostRef.current;
+    const legendHost = legendHostRef.current;
     if (host == null || !canRender) return undefined;
 
     plotRef.current?.destroy();
     host.innerHTML = '';
+    if (legendHost != null) legendHost.innerHTML = '';
     const initialData = data.length > 0 ? data : buildEmptyData(series.length);
 
     const options: uPlot.Options = {
       width: size.width,
       height: size.height,
       padding: [8, 8, 0, 0],
-      legend: { show: true },
+      legend: {
+        show: true,
+        mount: (_plot, element) => {
+          if (legendHost == null) return;
+          legendHost.innerHTML = '';
+          legendHost.appendChild(element);
+        },
+      },
       cursor: {
         points: { show: false },
         drag: {
@@ -320,10 +333,12 @@ export function UPlotGraphTile({
       </div>
       <div
         className="graph-tile__plot"
-        ref={plotHostRef}
         onWheel={handleWheel}
         onDoubleClick={onXRangeReset}
-      />
+      >
+        <div className="graph-tile__canvas" ref={plotHostRef} />
+        <div className="graph-tile__legend" ref={legendHostRef} />
+      </div>
     </section>
   );
 }

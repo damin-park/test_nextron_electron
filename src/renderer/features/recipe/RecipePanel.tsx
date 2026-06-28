@@ -157,6 +157,11 @@ export function RecipePanel({
   const cancelRunRef = useRef(false);
   const rowsRef = useRef<TemperatureRecipeRow[]>(rows);
   const runPlanRef = useRef<TemperatureRecipePlan | null>(null);
+  const graphStateRef = useRef<RecipeGraphState>({
+    profile: [],
+    elapsedSec: null,
+    running: false,
+  });
   const updateTokenRef = useRef(0);
   const pendingStepReapplyRef = useRef<PendingStepReapply | null>(null);
 
@@ -181,11 +186,29 @@ export function RecipePanel({
   const busy = running || starting;
 
   useEffect(() => {
-    onGraphStateChange({
-      profile: displayPlan.profile,
-      elapsedSec: running ? runState.elapsedSec : null,
-      running,
-    });
+    if (running) {
+      const nextGraphState: RecipeGraphState = {
+        profile: displayPlan.profile,
+        elapsedSec: runState.elapsedSec,
+        running: true,
+      };
+      graphStateRef.current = nextGraphState;
+      onGraphStateChange(nextGraphState);
+      return;
+    }
+
+    const currentGraphState = graphStateRef.current;
+    if (!currentGraphState.running && currentGraphState.elapsedSec == null) {
+      return;
+    }
+
+    const nextGraphState: RecipeGraphState = {
+      ...currentGraphState,
+      elapsedSec: null,
+      running: false,
+    };
+    graphStateRef.current = nextGraphState;
+    onGraphStateChange(nextGraphState);
   }, [
     onGraphStateChange,
     displayPlan.profile,
