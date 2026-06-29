@@ -31,7 +31,8 @@ export function ManualTemperatureControl({
 
   const connected = state?.connected === true;
   const runModeOn = Boolean(state?.temperatureRunMode ?? state?.runMode);
-  const busy = pendingCommand != null;
+  const safeStopping = Boolean(state?.safeStopping);
+  const busy = pendingCommand != null || safeStopping;
 
   const runCommand = async (
     label: string,
@@ -46,7 +47,9 @@ export function ManualTemperatureControl({
         setMessage(response.error ?? `${label} failed`);
         return false;
       }
-      setMessage(`${label} OK`);
+      setMessage(
+        response.data.safeStopping === true ? 'Safe stop started' : `${label} OK`,
+      );
       await refreshState();
       return true;
     } catch (error) {
@@ -213,10 +216,12 @@ export function ManualTemperatureControl({
         </button>
       </div>
 
-      {(message || pendingCommand || !connected) && (
+      {(message || pendingCommand || safeStopping || !connected) && (
         <div className={`manual-command-message${message?.endsWith('OK') ? ' is-ok' : ''}`}>
           {pendingCommand
             ? `${pendingCommand} pending`
+            : safeStopping
+              ? 'Temperature safe stop is in progress'
             : message ?? 'Temperature is not connected'}
         </div>
       )}

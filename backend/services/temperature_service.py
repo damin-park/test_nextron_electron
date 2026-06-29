@@ -174,7 +174,7 @@ class TemperatureService:
         command = DeviceCommand(
             device_id=device_id,
             device_type="temperature",
-            queue_type=CommandQueueType.CONTROL,
+            queue_type=CommandQueueType.SAFETY,
             action="set_stop_mode",
             payload={},
             response_mode=ResponseMode.WAIT,

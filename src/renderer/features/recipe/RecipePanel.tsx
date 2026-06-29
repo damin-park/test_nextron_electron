@@ -321,12 +321,13 @@ export function RecipePanel({
     }
   };
 
-  const stopTemperature = async (): Promise<void> => {
+  const stopTemperature = async (): Promise<boolean> => {
     const response = await setTemperatureStopMode(DEVICE_ID);
     if (response.status === 'error') {
       throw new Error(response.error ?? 'Temperature stop failed');
     }
     await temperatureConnection.refreshState();
+    return response.data.safeStopping === true;
   };
 
   const updateRunningRecipe = (
@@ -528,8 +529,10 @@ export function RecipePanel({
       }
 
       if (!cancelRunRef.current) {
-        await stopTemperature();
-        setMessage('Recipe completed');
+        const safeStopStarted = await stopTemperature();
+        setMessage(
+          safeStopStarted ? 'Recipe completed - safe stop started' : 'Recipe completed',
+        );
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -550,8 +553,10 @@ export function RecipePanel({
     if (!running) return;
     cancelRunRef.current = true;
     try {
-      await stopTemperature();
-      setMessage('Recipe stopped');
+      const safeStopStarted = await stopTemperature();
+      setMessage(
+        safeStopStarted ? 'Recipe stopped - safe stop started' : 'Recipe stopped',
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -733,8 +738,8 @@ export function RecipePanel({
       {(message || !connected) && (
         <div
           className={`recipe-message${
-            message === 'Recipe completed' ||
-            message === 'Recipe stopped' ||
+            message?.startsWith('Recipe completed') ||
+            message?.startsWith('Recipe stopped') ||
             message === 'Recipe updated'
               ? ' is-ok'
               : ''

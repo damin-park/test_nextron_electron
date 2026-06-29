@@ -43,6 +43,7 @@ class TemperatureActor:
 
         self._worker_thread: Optional[threading.Thread] = None
         self._shutdown_event = threading.Event()
+        self._io_lock = threading.Lock()
 
         self._polling_thread: Optional[threading.Thread] = None
         self._polling_stop_event = threading.Event()
@@ -53,6 +54,12 @@ class TemperatureActor:
 
         self._connected = False
         self._connection_config: Optional[dict[str, Any]] = None
+        self._model: str = "FB100"
+
+        self._safe_stop_thread: Optional[threading.Thread] = None
+        self._safe_stop_cancel = threading.Event()
+        self._safe_stopping = False
+        self._safe_stop_target: Optional[float] = None
 
     def start(self) -> None:
         self._shutdown_event.clear()
@@ -65,10 +72,13 @@ class TemperatureActor:
         logger.info("[TemperatureActor] worker started")
 
     def stop(self) -> None:
+        self._safe_stop_cancel.set()
         self.stop_polling()
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.join(timeout=5.0)
+        if self._safe_stop_thread and self._safe_stop_thread.is_alive():
+            self._safe_stop_thread.join(timeout=3.0)
         try:
             if self._transport is not None:
                 self._transport.close()
@@ -145,6 +155,7 @@ class TemperatureActor:
             )
 
         if result.ok and result.data:
+            result_data = self._with_safe_stop_state(result.data)
             if command.action in ("manual_start", "recipe_step_start"):
                 # composite command는 내부에서 이미 step별 state 업데이트를 수행했다.
                 # result.data의 composite 응답 필드(steps/action/state)를
@@ -156,7 +167,7 @@ class TemperatureActor:
             else:
                 self._state_manager.update_temperature_state(
                     command.device_id,
-                    {**result.data, "error": None, "lastCommandId": command.command_id},
+                    {**result_data, "error": None, "lastCommandId": command.command_id},
                 )
         elif not result.ok and result.error:
             self._state_manager.update_temperature_state(
@@ -188,7 +199,9 @@ class TemperatureActor:
             return self._run_disconnect(command)
         if action == "read_status":
             return self._run_read_status(command)
-        if action in ("write_setpoint", "set_run_mode", "set_stop_mode"):
+        if action == "set_stop_mode":
+            return self._run_safe_stop_mode(command)
+        if action in ("write_setpoint", "set_run_mode"):
             return self._run_control(command)
         if action == "write_ramping_rate":
             return self._run_write_ramping_rate(command)
@@ -223,6 +236,9 @@ class TemperatureActor:
         if result.ok:
             self._connected = True
             self._connection_config = config
+            self._model = str(
+                result.data.get("model") or command.payload.get("model") or "FB100"
+            )
             self.start_polling(
                 device_id=command.device_id,
                 interval_sec=self._polling_interval_sec,
@@ -240,6 +256,7 @@ class TemperatureActor:
         result = self._controller.parse_result(command, responses)
         self._connected = False
         self._connection_config = None
+        self._model = "FB100"
         self._transport.close()
         return result
 
@@ -262,6 +279,24 @@ class TemperatureActor:
                 device_id=command.device_id,
                 error="Temperature device is not connected",
             )
+        if self._safe_stopping and command.action in ("write_setpoint", "set_run_mode"):
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                data=self._safe_stop_patch(),
+                error="Temperature safe stop is in progress",
+            )
+        return self._run_control_internal(command)
+
+    def _run_control_internal(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature device is not connected",
+            )
         responses = self._run_transactions(command)
         return self._controller.parse_result(command, responses)
 
@@ -273,7 +308,24 @@ class TemperatureActor:
                 device_id=command.device_id,
                 error="Temperature device is not connected",
             )
+        if self._safe_stopping:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                data=self._safe_stop_patch(),
+                error="Temperature safe stop is in progress",
+            )
+        return self._run_write_ramping_rate_internal(command)
 
+    def _run_write_ramping_rate_internal(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature device is not connected",
+            )
         hu_responses = self._run_transactions(command)
         hu_response = next(
             (response for response in hu_responses if response.name == "HU"),
@@ -291,7 +343,7 @@ class TemperatureActor:
             float(command.payload["value"]),
             hu_response,
         )
-        responses = [self._transport.transaction(tx) for tx in write_transactions]
+        responses = [self._transaction(tx) for tx in write_transactions]
         return self._controller.parse_result(command, responses)
 
     def _run_manual_start(self, command: DeviceCommand) -> CommandResult:
@@ -306,6 +358,14 @@ class TemperatureActor:
                 ok=False,
                 device_id=command.device_id,
                 error="Temperature device is not connected",
+            )
+        if self._safe_stopping:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                data=self._safe_stop_patch(),
+                error="Temperature safe stop is in progress",
             )
 
         set_value: float = float(command.payload["setValue"])
@@ -430,6 +490,14 @@ class TemperatureActor:
                 device_id=command.device_id,
                 error="Temperature device is not connected",
             )
+        if self._safe_stopping:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                data=self._safe_stop_patch(),
+                error="Temperature safe stop is in progress",
+            )
 
         recipe_run_id = command.payload.get("recipeRunId")
         cycle_index = command.payload.get("cycleIndex")
@@ -532,9 +600,258 @@ class TemperatureActor:
             data={**identifiers, "steps": steps, "state": final_state},
         )
 
+    def _run_safe_stop_mode(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature device is not connected",
+            )
+
+        if self._safe_stopping:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=True,
+                device_id=command.device_id,
+                data=self._safe_stop_patch(),
+            )
+
+        state = self._state_manager.get_temperature_state(command.device_id) or {}
+        run_mode = bool(state.get("temperatureRunMode", state.get("runMode", False)))
+        pv = self._coerce_float(state.get("pv", state.get("currentTemperature")))
+        plan = self._safe_stop_plan(pv)
+
+        if not run_mode or plan is None:
+            return self._run_control_internal(command)
+
+        mode, target, threshold = plan
+        self._safe_stopping = True
+        self._safe_stop_target = target
+        self._safe_stop_cancel.clear()
+        self._state_manager.update_temperature_state(
+            command.device_id,
+            {
+                "safeStopping": True,
+                "safeStopTarget": target,
+                "temperatureRunMode": False,
+                "runMode": False,
+                "connected": True,
+                "error": None,
+                "lastCommandId": command.command_id,
+            },
+        )
+        self._safe_stop_thread = threading.Thread(
+            target=self._safe_stop_worker,
+            args=(command.device_id, mode, target, threshold),
+            name="temp-safe-stop",
+            daemon=True,
+        )
+        self._safe_stop_thread.start()
+        return CommandResult(
+            command_id=command.command_id,
+            ok=True,
+            device_id=command.device_id,
+            data=self._safe_stop_patch(),
+        )
+
+    def _safe_stop_worker(
+        self,
+        device_id: str,
+        mode: str,
+        target: float,
+        threshold: float,
+    ) -> None:
+        max_wait_sec = 1800.0
+        poll_interval_sec = 1.0
+        stable_required_sec = 3.0
+        reapply_interval_sec = 30.0
+        ramping_rate = 30.0
+        elapsed = 0.0
+        stable_elapsed = 0.0
+        next_reapply = 0.0
+
+        try:
+            while elapsed < max_wait_sec and not self._safe_stop_cancel.is_set():
+                if elapsed >= next_reapply:
+                    self._apply_safe_stop_parameters(device_id, target, ramping_rate)
+                    next_reapply += reapply_interval_sec
+
+                status = self._read_status_internal(device_id)
+                if status.ok and status.data:
+                    self._state_manager.update_temperature_state(
+                        device_id,
+                        {**self._with_safe_stop_state(status.data), "error": None},
+                    )
+
+                pv = self._coerce_float(status.data.get("pv") if status.data else None)
+                reached = (
+                    pv is not None and pv >= threshold
+                    if mode == "cold"
+                    else pv is not None and pv < threshold
+                )
+                if reached:
+                    stable_elapsed += poll_interval_sec
+                    if stable_elapsed >= stable_required_sec:
+                        logger.info(
+                            "[TemperatureActor] safe stop target reached mode=%s pv=%s target=%s",
+                            mode,
+                            pv,
+                            target,
+                        )
+                        break
+                else:
+                    stable_elapsed = 0.0
+
+                time.sleep(poll_interval_sec)
+                elapsed += poll_interval_sec
+
+            if elapsed >= max_wait_sec:
+                logger.warning("[TemperatureActor] safe stop timed out; forcing stop")
+
+            if not self._safe_stop_cancel.is_set():
+                stop_result = self._run_control_internal(
+                    self._make_command(device_id, "set_stop_mode")
+                )
+                if stop_result.ok and stop_result.data:
+                    self._state_manager.update_temperature_state(
+                        device_id,
+                        {
+                            **stop_result.data,
+                            "safeStopping": False,
+                            "safeStopTarget": None,
+                            "error": None,
+                        },
+                    )
+                elif not stop_result.ok:
+                    logger.warning(
+                        "[TemperatureActor] safe stop final stop failed: %s",
+                        stop_result.error,
+                    )
+        except Exception:
+            logger.exception("[TemperatureActor] safe stop worker failed")
+        finally:
+            self._safe_stopping = False
+            self._safe_stop_target = None
+            self._safe_stop_cancel.clear()
+            self._state_manager.update_temperature_state(
+                device_id,
+                {
+                    "safeStopping": False,
+                    "safeStopTarget": None,
+                    "temperatureRunMode": False,
+                    "runMode": False,
+                },
+            )
+            self._safe_stop_thread = None
+
+    def _apply_safe_stop_parameters(
+        self,
+        device_id: str,
+        target: float,
+        ramping_rate: float,
+    ) -> None:
+        if self._safe_stop_cancel.is_set():
+            return
+
+        setpoint = self._run_control_internal(
+            self._make_command(device_id, "write_setpoint", {"value": target})
+        )
+        if not setpoint.ok:
+            logger.warning("[TemperatureActor] safe stop setpoint failed: %s", setpoint.error)
+
+        run = self._run_control_internal(self._make_command(device_id, "set_run_mode"))
+        if not run.ok:
+            logger.warning("[TemperatureActor] safe stop run mode failed: %s", run.error)
+
+        ramp = self._run_write_ramping_rate_internal(
+            self._make_command(device_id, "write_ramping_rate", {"value": ramping_rate})
+        )
+        if not ramp.ok:
+            logger.warning("[TemperatureActor] safe stop ramping rate failed: %s", ramp.error)
+
+        self._state_manager.update_temperature_state(
+            device_id,
+            {
+                "sv": target,
+                "targetSetpoint": target,
+                "rampingRate": ramping_rate,
+                **self._safe_stop_patch(),
+                "error": None,
+            },
+        )
+
+    def _read_status_internal(self, device_id: str) -> CommandResult:
+        command = self._make_command(device_id, "read_status")
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=device_id,
+                error="Temperature device is not connected",
+            )
+        responses = self._run_transactions(command)
+        return self._controller.parse_result(command, responses)
+
+    def _safe_stop_plan(self, pv: Optional[float]) -> Optional[tuple[str, float, float]]:
+        if pv is None:
+            return None
+        model = self._model.upper()
+        target = 100.0 if "CH" in model else 30.0
+        threshold = target + 2.0
+        if pv >= threshold:
+            return ("high", target, threshold)
+        if pv < 0:
+            cold_target = 10.0
+            return ("cold", cold_target, cold_target - 1.0)
+        return None
+
+    def _safe_stop_patch(self) -> dict[str, Any]:
+        patch: dict[str, Any] = {
+            "safeStopping": self._safe_stopping,
+            "safeStopTarget": self._safe_stop_target,
+        }
+        if self._safe_stopping:
+            patch.update({"temperatureRunMode": False, "runMode": False})
+        return patch
+
+    def _with_safe_stop_state(self, data: dict[str, Any]) -> dict[str, Any]:
+        if not self._safe_stopping:
+            return data
+        return {**data, **self._safe_stop_patch()}
+
+    def _make_command(
+        self,
+        device_id: str,
+        action: str,
+        payload: Optional[dict[str, Any]] = None,
+    ) -> DeviceCommand:
+        return DeviceCommand(
+            device_id=device_id,
+            device_type="temperature",
+            queue_type=CommandQueueType.SAFETY,
+            action=action,
+            payload=payload or {},
+            response_mode=ResponseMode.WAIT,
+            context={"origin": "safe_stop"},
+        )
+
+    @staticmethod
+    def _coerce_float(value: Any) -> Optional[float]:
+        try:
+            if value is None:
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
     def _run_transactions(self, command: DeviceCommand) -> list[TransportResponse]:
         transactions = self._controller.build_transactions(command)
-        return [self._transport.transaction(tx) for tx in transactions]
+        return [self._transaction(tx) for tx in transactions]
+
+    def _transaction(self, tx: Any) -> TransportResponse:
+        with self._io_lock:
+            return self._transport.transaction(tx)
 
     @staticmethod
     def _transport_config(command: DeviceCommand) -> dict[str, Any]:

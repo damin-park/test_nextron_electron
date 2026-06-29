@@ -112,6 +112,8 @@ export interface TemperatureDeviceState {
   rampingRateUnit?: string | null;
   temperatureRunMode?: boolean | null;
   runMode?: boolean | null;
+  safeStopping?: boolean | null;
+  safeStopTarget?: number | null;
   /** 구코드 호환 alias */
   currentTemperature?: number | null;
   targetSetpoint?: number | null;
