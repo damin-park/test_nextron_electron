@@ -9,6 +9,11 @@ export type IconName =
   | 'table'
   | 'settings'
   | 'thermostat'
+  | 'cool'
+  | 'humidity'
+  | 'mfc'
+  | 'pressure'
+  | 'measurement'
   | 'link'
   | 'collapse_left'
   | 'collapse_right'
@@ -28,6 +33,11 @@ const ICON_GLYPHS: Record<IconName, string> = {
   table: '\uF191',
   settings: '\uE8B8',
   thermostat: '\uF076',
+  cool: '\uF166',
+  humidity: '\uF87E',
+  mfc: '\uEFD8',
+  pressure: '\uE94D',
+  measurement: '\uEC1B',
   link: '\uE250',
   collapse_left: '\uEAC3', // keyboard_double_arrow_left
   collapse_right: '\uEAC9', // keyboard_double_arrow_right

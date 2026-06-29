@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -13,6 +14,10 @@ import {
   type TemperatureManualStartResponseData,
 } from '../../services/temperatureClient';
 import type { UseTemperatureConnectionResult } from '../temperature/useTemperatureConnection';
+import {
+  loadManualTemperatureInputs,
+  saveManualTemperatureInputs,
+} from './manualPersistence';
 
 interface ManualTemperatureControlProps {
   connection: UseTemperatureConnectionResult;
@@ -22,17 +27,32 @@ export function ManualTemperatureControl({
   connection,
 }: ManualTemperatureControlProps): ReactElement {
   const { state, refreshState } = connection;
-  const [setValue, setSetValue] = useState('25.0');
-  const [rampingRate, setRampingRate] = useState('30.0');
+  const initialInputs = loadManualTemperatureInputs();
+  const [setValue, setSetValue] = useState(initialInputs.setValue);
+  const [rampingRate, setRampingRate] = useState(initialInputs.rampingRate);
   const [pendingCommand, setPendingCommand] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [optimisticRunMode, setOptimisticRunMode] = useState<boolean | null>(null);
   const lastSubmittedSetValueRef = useRef(setValue);
   const lastSubmittedRampingRateRef = useRef(rampingRate);
 
+  useEffect(() => {
+    saveManualTemperatureInputs({ setValue, rampingRate });
+  }, [setValue, rampingRate]);
+
   const connected = state?.connected === true;
-  const runModeOn = Boolean(state?.temperatureRunMode ?? state?.runMode);
+  const actualRunModeOn = Boolean(state?.temperatureRunMode ?? state?.runMode);
+  // 낙관적 표시값: 명령 전송 직후 즉시 UI 반영, 실제 상태가 갱신되면 동기화된다.
+  const runModeOn = optimisticRunMode ?? actualRunModeOn;
   const safeStopping = Boolean(state?.safeStopping);
   const busy = pendingCommand != null || safeStopping;
+
+  // 실제 telemetry 상태가 낙관적 값과 일치하면 override 해제.
+  useEffect(() => {
+    if (optimisticRunMode != null && actualRunModeOn === optimisticRunMode) {
+      setOptimisticRunMode(null);
+    }
+  }, [actualRunModeOn, optimisticRunMode]);
 
   const runCommand = async (
     label: string,
@@ -111,40 +131,67 @@ export function ManualTemperatureControl({
     void commit();
   };
 
-  const handleRun = async (): Promise<void> => {
+  const handleRun = (): void => {
     const targetValue = parseInput(setValue, 'Set Value');
     if (targetValue == null) return;
     const rampValue = parseInput(rampingRate, 'Ramping Rate');
     if (rampValue == null) return;
+    if (!connected) return;
 
-    if (!connected || busy) return;
-    setPendingCommand('On');
-    setMessage(null);
-    try {
-      const response = await manualStartTemperature('temperature-1', {
-        setValue: targetValue,
-        rampingRate: rampValue,
-      });
-      if (response.status === 'error') {
-        const detail = (response.data as TemperatureManualStartResponseData | undefined);
-        const failedStep = detail?.failedStep;
-        const errMsg = response.error ?? 'manual start failed';
-        setMessage(failedStep ? `Failed at ${failedStep}: ${errMsg}` : errMsg);
-      } else {
-        lastSubmittedSetValueRef.current = setValue.trim();
-        lastSubmittedRampingRateRef.current = rampingRate.trim();
-        setMessage('Temperature control started');
-        await refreshState();
+    // 낙관적 ON: 응답을 기다리지 않고 즉시 UI 반영 (tkinter fire-and-forget 방식).
+    setOptimisticRunMode(true);
+    lastSubmittedSetValueRef.current = setValue.trim();
+    lastSubmittedRampingRateRef.current = rampingRate.trim();
+    setMessage('Temperature control started');
+
+    void (async () => {
+      try {
+        const response = await manualStartTemperature('temperature-1', {
+          setValue: targetValue,
+          rampingRate: rampValue,
+        });
+        if (response.status === 'error') {
+          const detail = response.data as unknown as
+            | TemperatureManualStartResponseData
+            | undefined;
+          const failedStep = detail?.failedStep;
+          const errMsg = response.error ?? 'manual start failed';
+          setMessage(failedStep ? `Failed at ${failedStep}: ${errMsg}` : errMsg);
+          setOptimisticRunMode(null); // 실패 시 실제 상태로 되돌림
+        }
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : String(error));
+        setOptimisticRunMode(null);
+      } finally {
+        void refreshState();
       }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setPendingCommand(null);
-    }
+    })();
   };
 
-  const handleStop = (): Promise<boolean> =>
-    runCommand('Off', () => setTemperatureStopMode('temperature-1'));
+  const handleStop = (): void => {
+    if (!connected) return;
+
+    // 낙관적 OFF: 즉시 UI 반영 후 명령 전송.
+    setOptimisticRunMode(false);
+    setMessage('Off');
+
+    void (async () => {
+      try {
+        const response = await setTemperatureStopMode('temperature-1');
+        if (response.status === 'error') {
+          setMessage(response.error ?? 'Off failed');
+          setOptimisticRunMode(null);
+        } else if (response.data.safeStopping === true) {
+          setMessage('Safe stop started');
+        }
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : String(error));
+        setOptimisticRunMode(null);
+      } finally {
+        void refreshState();
+      }
+    })();
+  };
 
   return (
     <section className="manual-device-panel">
@@ -199,8 +246,8 @@ export function ManualTemperatureControl({
           className={`manual-actions__button${
             runModeOn ? ' manual-actions__button--on-active' : ''
           }`}
-          disabled={!connected || busy}
-          onClick={() => void handleRun()}
+          disabled={!connected || safeStopping}
+          onClick={handleRun}
         >
           On
         </button>
@@ -209,8 +256,8 @@ export function ManualTemperatureControl({
           className={`manual-actions__button${
             !runModeOn ? ' manual-actions__button--off-active' : ''
           }`}
-          disabled={!connected || busy}
-          onClick={() => void handleStop()}
+          disabled={!connected || safeStopping}
+          onClick={handleStop}
         >
           Off
         </button>

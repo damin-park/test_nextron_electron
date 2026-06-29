@@ -177,7 +177,7 @@
 }
 
 .connection-banner.is-hidden {
-  visibility: hidden;
+  display: none;
 }
 
 .connection-banner--warning {
@@ -236,10 +236,10 @@
   flex: 0 0 auto;
   min-height: var(--dashboard-height);
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 6px 10px;
-  background: var(--md3-surface);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  background: #202020;
   border-bottom: 1px solid var(--md3-outline-variant);
   overflow-x: auto;
 }
@@ -598,14 +598,42 @@
   gap: 0;
   padding: 0;
   width: 260px;
-  background: var(--md3-surface-container);
-  border: 1px solid var(--md3-outline-variant);
-  border-radius: 8px;
+  background: #202020;
+  border: none;
+  border-right: 1px solid #282828;
+  border-radius: 0;
   overflow: hidden;
 }
 
 .temp-card.is-collapsed {
   width: 152px; /* 260 * 0.65 */
+}
+
+/* placeholder 패널 폭 (tkinter 패널 폭 재현) */
+.temp-card[data-id='chiller'] {
+  width: 140px;
+}
+.temp-card[data-id='humidity'] {
+  width: 140px;
+}
+.temp-card[data-id='mfc'] {
+  width: 140px;
+}
+.temp-card[data-id='pressure'] {
+  width: 140px;
+}
+.temp-card[data-id='smu'] {
+  width: 120px;
+}
+
+/* placeholder 수치는 패널 중앙에 정렬 (tkinter 재현) */
+.temp-card[data-id] .temp-card__body {
+  justify-content: center;
+}
+
+.temp-card[data-id] .temp-card__left {
+  min-width: auto;
+  align-items: center;
 }
 
 .temp-card.is-collapsed .temp-card__body {
@@ -788,6 +816,8 @@
   font-size: 10px;
   line-height: 1;
   color: var(--md3-on-surface-variant);
+  min-width: 14px;
+  text-align: left;
 }
 
 /* ─── 미연결(dim) 상태 ─── */

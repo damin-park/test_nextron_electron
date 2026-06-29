@@ -9,9 +9,10 @@ import { MainWindowShell } from '../components/layout/MainWindowShell';
 import { createDefaultSideMenuItems } from '../components/layout/sideMenuPreset';
 import { openSettings } from '../services/backendConnection';
 import { RECIPE, type ControlMode } from '../shared/types/ui';
+import { loadControlMode, saveControlMode } from './modePersistence';
 
 export function App(): ReactElement {
-  const [currentMode, setCurrentMode] = useState<ControlMode>(RECIPE);
+  const [currentMode, setCurrentMode] = useState<ControlMode>(loadControlMode);
   const [recipeActive, setRecipeActive] = useState(false);
   const [ivEnabled] = useState(false);
 
@@ -21,6 +22,7 @@ export function App(): ReactElement {
         return;
       }
       setCurrentMode(mode);
+      saveControlMode(mode);
     },
     [recipeActive],
   );
