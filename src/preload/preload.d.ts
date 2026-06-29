@@ -12,6 +12,9 @@ declare global {
       getBackendConnection: () => Promise<BackendConnectionInfo>;
       getBackendStatus: () => Promise<BackendRuntimeStatus>;
       requestAppShutdown: () => Promise<void>;
+      getSafeStopStatus: () => Promise<unknown>;
+      forceSafeStopShutdown: () => Promise<unknown>;
+      completeSafeStopShutdown: () => Promise<void>;
       openSettings: () => Promise<void>;
       closeSettings: () => Promise<void>;
       completeInitConnect: () => Promise<void>;

@@ -8,6 +8,7 @@ from backend.router.devices import (
 )
 from backend.router.health_router import router as health_router
 from backend.router.resources_router import router as resources_router
+from backend.router.system_router import router as system_router
 from backend.router.telemetry_router import router as telemetry_router
 
 api_router = APIRouter()
@@ -16,6 +17,7 @@ api_router = APIRouter()
 api_router.include_router(health_router)
 api_router.include_router(registry_router)
 api_router.include_router(resources_router)
+api_router.include_router(system_router)
 
 # Telemetry WebSocket (경로는 telemetry_router 내 TELEMETRY_WS_PATH 상수로 관리)
 api_router.include_router(telemetry_router)

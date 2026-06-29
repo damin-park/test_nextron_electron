@@ -8,6 +8,7 @@ from backend.router import api_router
 from backend.schemas.device import DeviceMode
 from backend.services.mfc_service import MfcService
 from backend.services.measurement_service import MeasurementService
+from backend.services.system_service import SystemService
 from backend.services.temperature_service import TemperatureService
 from backend.state.state_manager import StateManager
 from backend.telemetry.websocket_manager import TelemetryBroadcaster
@@ -57,8 +58,14 @@ async def lifespan(app: FastAPI):
     app.state.state_manager = state_manager
     app.state.telemetry_broadcaster = telemetry_broadcaster
     app.state.temperature_actor = temperature_actor
-    app.state.temperature_service = TemperatureService(
+    temperature_service = TemperatureService(
         actor=temperature_actor,
+        state_manager=state_manager,
+    )
+    app.state.temperature_service = temperature_service
+    app.state.system_service = SystemService(
+        temperature_actor=temperature_actor,
+        temperature_service=temperature_service,
         state_manager=state_manager,
     )
     app.state.mfc_service = MfcService()

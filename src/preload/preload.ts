@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('nextron', {
     ipcRenderer.invoke('backend:get-status'),
   requestAppShutdown: (): Promise<void> =>
     ipcRenderer.invoke('app:request-shutdown'),
+  getSafeStopStatus: (): Promise<unknown> =>
+    ipcRenderer.invoke('safe-stop:get-status'),
+  forceSafeStopShutdown: (): Promise<unknown> =>
+    ipcRenderer.invoke('safe-stop:force-quit'),
+  completeSafeStopShutdown: (): Promise<void> =>
+    ipcRenderer.invoke('safe-stop:complete'),
   // Settings 팝업 lifecycle.
   openSettings: (): Promise<void> => ipcRenderer.invoke('settings:open'),
   closeSettings: (): Promise<void> => ipcRenderer.invoke('settings:close'),

@@ -382,6 +382,40 @@ interface RegisteredDevicesConnectResponse {
   devices: RegisteredDeviceConnectResult[];
 }
 
+interface ApiCommandResponse<TData> {
+  status: 'ok' | 'error' | 'accepted';
+  data: TData;
+  error: string | null;
+}
+
+export interface BackendShutdownStatus {
+  safeStopRequired: boolean;
+  safeStopInfo: Record<
+    string,
+    {
+      safeStopping?: boolean;
+      target?: number | null;
+      pv?: number | null;
+      sv?: number | null;
+      hotPower?: number | null;
+      coolPower?: number | null;
+      unit?: string | null;
+    }
+  >;
+}
+
+const EMPTY_SHUTDOWN_STATUS: BackendShutdownStatus = {
+  safeStopRequired: false,
+  safeStopInfo: {},
+};
+
+const normalizeShutdownStatus = (
+  response?: ApiCommandResponse<Partial<BackendShutdownStatus>>,
+): BackendShutdownStatus => ({
+  safeStopRequired: response?.data.safeStopRequired === true,
+  safeStopInfo: response?.data.safeStopInfo ?? {},
+});
+
 /**
  * 등록된 장비 요약을 backend 에서 조회한다(시작 흐름 분기용).
  * 실패 시 안전하게 "등록 장비 없음"으로 간주한다.
@@ -405,3 +439,29 @@ export const connectRegisteredDevices =
 
     return result ?? { status: 'ok', attempted: 0, connected: 0, devices: [] };
   };
+
+export const prepareBackendShutdown = async (): Promise<BackendShutdownStatus> => {
+  const { url } = getBackendInfo();
+  const result = await httpPostJson<ApiCommandResponse<Partial<BackendShutdownStatus>>>(
+    `${url}/api/system/prepare-shutdown`,
+    15000,
+  );
+  return result ? normalizeShutdownStatus(result) : EMPTY_SHUTDOWN_STATUS;
+};
+
+export const getBackendShutdownStatus = async (): Promise<BackendShutdownStatus> => {
+  const { url } = getBackendInfo();
+  const result = await httpGetJson<ApiCommandResponse<Partial<BackendShutdownStatus>>>(
+    `${url}/api/system/shutdown-status`,
+  );
+  return result ? normalizeShutdownStatus(result) : EMPTY_SHUTDOWN_STATUS;
+};
+
+export const forceStopBackendControllers = async (): Promise<BackendShutdownStatus> => {
+  const { url } = getBackendInfo();
+  const result = await httpPostJson<ApiCommandResponse<Partial<BackendShutdownStatus>>>(
+    `${url}/api/system/force-stop-all`,
+    8000,
+  );
+  return result ? normalizeShutdownStatus(result) : EMPTY_SHUTDOWN_STATUS;
+};

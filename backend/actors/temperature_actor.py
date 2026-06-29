@@ -201,6 +201,8 @@ class TemperatureActor:
             return self._run_read_status(command)
         if action == "set_stop_mode":
             return self._run_safe_stop_mode(command)
+        if action == "force_stop_mode":
+            return self._run_force_stop_mode(command)
         if action in ("write_setpoint", "set_run_mode"):
             return self._run_control(command)
         if action == "write_ramping_rate":
@@ -653,6 +655,50 @@ class TemperatureActor:
             ok=True,
             device_id=command.device_id,
             data=self._safe_stop_patch(),
+        )
+
+    def _run_force_stop_mode(self, command: DeviceCommand) -> CommandResult:
+        if not self._connected:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=True,
+                device_id=command.device_id,
+                data={
+                    "connected": False,
+                    "safeStopping": False,
+                    "safeStopTarget": None,
+                    "temperatureRunMode": False,
+                    "runMode": False,
+                },
+            )
+
+        self._safe_stop_cancel.set()
+        if self._safe_stop_thread and self._safe_stop_thread.is_alive():
+            self._safe_stop_thread.join(timeout=3.0)
+
+        self._safe_stopping = False
+        self._safe_stop_target = None
+        result = self._run_control_internal(
+            self._make_command(command.device_id, "set_stop_mode")
+        )
+        data = {
+            **(result.data if result.data else {}),
+            "safeStopping": False,
+            "safeStopTarget": None,
+            "temperatureRunMode": False,
+            "runMode": False,
+            "connected": True,
+        }
+        self._state_manager.update_temperature_state(
+            command.device_id,
+            {**data, "error": None, "lastCommandId": command.command_id},
+        )
+        return CommandResult(
+            command_id=command.command_id,
+            ok=result.ok,
+            device_id=command.device_id,
+            data=data,
+            error=result.error,
         )
 
     def _safe_stop_worker(

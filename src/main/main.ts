@@ -4,14 +4,21 @@ import started from 'electron-squirrel-startup';
 import {
   checkBackendHealth,
   connectRegisteredDevices,
+  forceStopBackendControllers,
   getBackendConnection,
   getBackendInfo,
+  getBackendShutdownStatus,
   getBackendStatus,
   getRegisteredDevicesSummary,
+  prepareBackendShutdown,
   setSystemEventListener,
   startPythonBackend,
   stopPythonBackend,
 } from './python-backend';
+import {
+  registerSafeStopIpc,
+  showSafeStopWindow,
+} from './safe-stop-window';
 import {
   closeSplashWindow,
   createSplashWindow,
@@ -33,6 +40,8 @@ if (started) {
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 let mainWindow: BrowserWindow | undefined;
+let shutdownAllowed = false;
+let shutdownInProgress = false;
 
 if (!gotSingleInstanceLock) {
   app.quit();
@@ -57,6 +66,14 @@ const createWindow = () => {
 
   // tkinter UI와 동일하게 앱 내부 메뉴바만 사용한다.
   mainWindow.setMenuBarVisibility(false);
+
+  mainWindow.on('close', (event) => {
+    if (shutdownAllowed) {
+      return;
+    }
+    event.preventDefault();
+    void beginAppShutdown();
+  });
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -85,7 +102,12 @@ ipcMain.handle('backend:health', () => checkBackendHealth());
 ipcMain.handle('backend:get-connection', () => getBackendConnection());
 ipcMain.handle('backend:get-status', () => getBackendStatus());
 ipcMain.handle('app:request-shutdown', () => {
-  app.quit();
+  void beginAppShutdown();
+});
+
+registerSafeStopIpc({
+  getStatus: getBackendShutdownStatus,
+  forceStop: forceStopBackendControllers,
 });
 
 // Settings 팝업 lifecycle.
@@ -97,6 +119,28 @@ ipcMain.handle('settings:close', () => {
 });
 
 const SPLASH_MIN_MS = 1500;
+const finishAppShutdown = (): void => {
+  shutdownAllowed = true;
+  app.quit();
+};
+
+const beginAppShutdown = async (): Promise<void> => {
+  if (shutdownInProgress) {
+    return;
+  }
+  shutdownInProgress = true;
+
+  try {
+    const prepare = await prepareBackendShutdown();
+    if (prepare.safeStopRequired) {
+      await showSafeStopWindow(mainWindow, prepare);
+    }
+  } catch (error) {
+    console.warn('Shutdown preparation failed; continuing app shutdown.', error);
+  } finally {
+    finishAppShutdown();
+  }
+};
 
 /**
  * 메인 윈도우를 생성하고, 콘텐츠 로드 완료 후 표시한다.
@@ -198,11 +242,16 @@ app.on('second-instance', () => {
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    void beginAppShutdown();
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  if (!shutdownAllowed) {
+    event.preventDefault();
+    void beginAppShutdown();
+    return;
+  }
   stopPythonBackend();
 });
 
