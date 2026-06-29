@@ -44,6 +44,7 @@ interface RecipePanelProps {
   temperatureConnection: UseTemperatureConnectionResult;
   onGraphStateChange: (state: RecipeGraphState) => void;
   onRecipeStart: () => void;
+  onRecipeActiveChange: (active: boolean) => void;
 }
 
 type TemperatureRecipePlan = ReturnType<typeof buildTemperatureRecipePlan>;
@@ -138,6 +139,7 @@ export function RecipePanel({
   temperatureConnection,
   onGraphStateChange,
   onRecipeStart,
+  onRecipeActiveChange,
 }: RecipePanelProps): ReactElement {
   const initialRecipeTableState = getInitialRecipeTableState();
   const [rows, setRows] = useState<TemperatureRecipeRow[]>(
@@ -186,6 +188,10 @@ export function RecipePanel({
   const busy = running || starting;
 
   useEffect(() => {
+    onRecipeActiveChange(busy);
+  }, [busy, onRecipeActiveChange]);
+
+  useEffect(() => {
     if (running) {
       const nextGraphState: RecipeGraphState = {
         profile: displayPlan.profile,
@@ -215,6 +221,22 @@ export function RecipePanel({
     runState.elapsedSec,
     running,
   ]);
+
+  useEffect(() => {
+    if (!running || runState.startedAt == null) return undefined;
+
+    const id = window.setInterval(() => {
+      setRunState((current) => {
+        if (!current.running || current.startedAt == null) return current;
+        return {
+          ...current,
+          elapsedSec: (performance.now() - current.startedAt) / 1000,
+        };
+      });
+    }, 250);
+
+    return () => window.clearInterval(id);
+  }, [running, runState.startedAt]);
 
   useEffect(() => {
     saveRecipeTableState({ rows, cycleCount });
@@ -497,10 +519,6 @@ export function RecipePanel({
         await waitUntilRecipeTime(step.endSec, startedAt, () => {
           if (cancelRunRef.current) return false;
           if (observedUpdateToken !== updateTokenRef.current) return false;
-          setRunState((current) => ({
-            ...current,
-            elapsedSec: (performance.now() - startedAt) / 1000,
-          }));
           return true;
         });
 

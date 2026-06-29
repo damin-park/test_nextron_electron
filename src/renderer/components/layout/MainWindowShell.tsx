@@ -27,11 +27,13 @@ export interface MainWindowShellProps {
   currentMode: ControlMode;
   /** 사이드 메뉴 항목 (preset 에서 생성하여 주입) */
   sideMenuItems: SideMenuItemConfig[];
+  onRecipeActiveChange: (active: boolean) => void;
 }
 
 export function MainWindowShell({
   currentMode,
   sideMenuItems,
+  onRecipeActiveChange,
 }: MainWindowShellProps): ReactElement {
   const { controlPanelRef, workAreaRef, splitterRef, onPointerDown } = useSplitter();
   const temperatureConnection = useTemperatureConnection('temperature-1');
@@ -67,6 +69,7 @@ export function MainWindowShell({
               temperatureConnection={temperatureConnection}
               onRecipeGraphStateChange={handleRecipeGraphStateChange}
               onRecipeStart={handleRecipeStart}
+              onRecipeActiveChange={onRecipeActiveChange}
               ref={controlPanelRef}
             />
             <div
