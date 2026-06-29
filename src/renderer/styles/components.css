@@ -172,6 +172,7 @@
   font-size: 12px;
   color: var(--md3-on-surface);
   background: var(--md3-surface-container-low);
+  border-bottom: 1px solid var(--md3-outline-variant);
   overflow: hidden;
 }
 
@@ -181,24 +182,51 @@
 
 .connection-banner--warning {
   background: var(--banner-warning-bg);
+  color: #ffd7d7;
 }
 
 .connection-banner--success {
   background: var(--banner-success-bg);
+  color: #c8f7d5;
 }
 
 .connection-banner--safe-stop,
 .connection-banner--connection {
   background: var(--banner-connection-bg);
+  color: #fff3c4;
 }
 
-.connection-banner__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--md3-tertiary);
-  margin-right: 8px;
+.connection-banner__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-banner__close {
   flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.connection-banner__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 1;
+}
+
+.connection-banner__close .material-symbols-outlined {
+  font-size: 18px;
 }
 
 /* ──────────────────────────────────────────────────────────

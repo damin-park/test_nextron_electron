@@ -10,6 +10,7 @@ export type BannerKind = 'idle' | 'warning' | 'success' | 'safe-stop' | 'connect
 export interface ConnectionBannerProps {
   kind?: BannerKind;
   message?: string;
+  onDismiss?: () => void;
 }
 
 const KIND_CLASS: Record<Exclude<BannerKind, 'idle'>, string> = {
@@ -22,6 +23,7 @@ const KIND_CLASS: Record<Exclude<BannerKind, 'idle'>, string> = {
 export function ConnectionBanner({
   kind = 'idle',
   message = '',
+  onDismiss,
 }: ConnectionBannerProps): ReactElement {
   const classNames = ['connection-banner'];
   if (kind === 'idle') {
@@ -32,8 +34,17 @@ export function ConnectionBanner({
 
   return (
     <div className={classNames.join(' ')}>
-      <span className="connection-banner__dot" />
       <span className="connection-banner__text">{kind === 'idle' ? '' : message}</span>
+      {kind !== 'idle' && onDismiss ? (
+        <button
+          type="button"
+          className="connection-banner__close"
+          aria-label="Dismiss banner"
+          onClick={onDismiss}
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      ) : null}
     </div>
   );
 }

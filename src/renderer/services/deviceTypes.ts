@@ -114,6 +114,8 @@ export interface TemperatureDeviceState {
   runMode?: boolean | null;
   safeStopping?: boolean | null;
   safeStopTarget?: number | null;
+  chamber?: boolean | null;
+  Chamber?: boolean | null;
   /** 구코드 호환 alias */
   currentTemperature?: number | null;
   targetSetpoint?: number | null;
