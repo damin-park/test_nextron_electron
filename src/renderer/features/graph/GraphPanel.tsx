@@ -76,7 +76,6 @@ export function GraphPanel({
     null,
   );
   const [tileXRanges, setTileXRanges] = useState<Record<string, XRange>>({});
-  const hasCustomXRange = Object.keys(tileXRanges).length > 0;
 
   // Save layout whenever it changes
   useLayoutEffect(() => {
@@ -172,10 +171,6 @@ export function GraphPanel({
     setTileXRanges({});
   };
 
-  const resetXRange = (): void => {
-    setTileXRanges({});
-  };
-
   const toggleEditMode = (): void => {
     setEditMode((current) => (current === 'edit' ? 'none' : 'edit'));
   };
@@ -245,21 +240,7 @@ export function GraphPanel({
           </span>
         )}
 
-        {/* Spacer */}
         <div className="graph-panel__header-spacer" />
-
-        {/* Right: data info + zoom reset */}
-        <span className="graph-panel__meta">
-          {graphHistory.pointCount.toLocaleString()} pts
-        </span>
-        <button
-          type="button"
-          className="graph-panel__text-btn"
-          onClick={resetXRange}
-          disabled={!hasCustomXRange}
-        >
-          Reset Zoom
-        </button>
       </header>
 
       <div className={`graph-panel__tiles ${getLayoutGridClass(layout.tiles.length)}`}>

@@ -12,12 +12,14 @@ from concurrent.futures import Future
 from typing import Optional
 
 from backend.actors.temperature_actor import TemperatureActor
+from backend.managers.device_registry import DeviceRegistryManager
 from backend.schemas.command import (
     CommandQueueType,
     CommandResult,
     DeviceCommand,
     ResponseMode,
 )
+from backend.schemas.device import DeviceType
 from backend.schemas.temperature import (
     TemperatureConnectRequest,
     TemperatureDecimalPointRequest,
@@ -85,7 +87,18 @@ class TemperatureService:
     async def connect(
         self, device_id: str, request: Optional[TemperatureConnectRequest] = None
     ) -> CommandResult:
-        req = request or TemperatureConnectRequest()
+        req = self._resolve_connect_request(device_id, request)
+        if not req.port:
+            return CommandResult(
+                command_id=str(uuid.uuid4()),
+                ok=False,
+                device_id=device_id,
+                error=(
+                    "Temperature connection port is not configured. "
+                    "Register the temperature controller connection first."
+                ),
+            )
+
         command = DeviceCommand(
             device_id=device_id,
             device_type="temperature",
@@ -103,6 +116,29 @@ class TemperatureService:
         )
         future = self._actor.submit(command)
         return await self._await(future, command.command_id, device_id, command.timeout_sec)
+
+    def _resolve_connect_request(
+        self,
+        device_id: str,
+        request: Optional[TemperatureConnectRequest],
+    ) -> TemperatureConnectRequest:
+        req = request or TemperatureConnectRequest()
+        if req.port:
+            return req
+
+        registry = DeviceRegistryManager.instance()
+        device = registry.get_device(device_id)
+        if device is None:
+            device = registry.find_by_type(DeviceType.TEMPERATURE)
+        if device is None or device.connection is None:
+            return req
+
+        return TemperatureConnectRequest(
+            port=device.connection.port,
+            baudrate=req.baudrate or device.connection.baudrate,
+            timeoutSec=req.timeoutSec or device.connection.timeoutMs / 1000.0,
+            model=device.model or req.model or "FB100",
+        )
 
     async def disconnect(self, device_id: str) -> CommandResult:
         command = DeviceCommand(

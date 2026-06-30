@@ -240,6 +240,13 @@ class TemperatureActor:
 
     def _run_probe(self, command: DeviceCommand) -> CommandResult:
         config = self._transport_config(command)
+        if not config["port"]:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature connection port is not configured",
+            )
         responses: list[TransportResponse] = []
         try:
             self._transport.open(config)
@@ -252,6 +259,13 @@ class TemperatureActor:
 
     def _run_connect(self, command: DeviceCommand) -> CommandResult:
         config = self._transport_config(command)
+        if not config["port"]:
+            return CommandResult(
+                command_id=command.command_id,
+                ok=False,
+                device_id=command.device_id,
+                error="Temperature connection port is not configured",
+            )
         self._transport.open(config)
         responses = self._run_transactions(command)
         result = self._controller.parse_result(command, responses)

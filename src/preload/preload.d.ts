@@ -15,6 +15,10 @@ declare global {
       getSafeStopStatus: () => Promise<unknown>;
       forceSafeStopShutdown: () => Promise<unknown>;
       completeSafeStopShutdown: () => Promise<void>;
+      savePngImage: (payload: {
+        dataUrl: string;
+        defaultFileName?: string;
+      }) => Promise<{ canceled: boolean; filePath?: string }>;
       openSettings: () => Promise<void>;
       closeSettings: () => Promise<void>;
       completeInitConnect: () => Promise<void>;

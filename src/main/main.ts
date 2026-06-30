@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import {
@@ -103,6 +104,42 @@ ipcMain.handle('backend:get-connection', () => getBackendConnection());
 ipcMain.handle('backend:get-status', () => getBackendStatus());
 ipcMain.handle('app:request-shutdown', () => {
   void beginAppShutdown();
+});
+ipcMain.handle('graph:save-png', async (_event, payload: unknown) => {
+  if (
+    typeof payload !== 'object' ||
+    payload == null ||
+    !('dataUrl' in payload) ||
+    typeof payload.dataUrl !== 'string'
+  ) {
+    throw new Error('Invalid PNG payload');
+  }
+
+  const requestedName =
+    'defaultFileName' in payload && typeof payload.defaultFileName === 'string'
+      ? payload.defaultFileName
+      : 'graph.png';
+  const defaultFileName = requestedName.toLowerCase().endsWith('.png')
+    ? requestedName
+    : `${requestedName}.png`;
+
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save Graph as PNG',
+    defaultPath: defaultFileName,
+    filters: [{ name: 'PNG Image', extensions: ['png'] }],
+  });
+
+  if (result.canceled || !result.filePath) {
+    return { canceled: true };
+  }
+
+  const base64 = payload.dataUrl.replace(/^data:image\/png;base64,/, '');
+  if (base64 === payload.dataUrl) {
+    throw new Error('Invalid PNG data URL');
+  }
+
+  await fs.writeFile(result.filePath, Buffer.from(base64, 'base64'));
+  return { canceled: false, filePath: result.filePath };
 });
 
 registerSafeStopIpc({

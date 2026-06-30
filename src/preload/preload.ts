@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld('nextron', {
   completeSafeStopShutdown: (): Promise<void> =>
     ipcRenderer.invoke('safe-stop:complete'),
   // Settings 팝업 lifecycle.
+  savePngImage: (payload: {
+    dataUrl: string;
+    defaultFileName?: string;
+  }): Promise<{ canceled: boolean; filePath?: string }> =>
+    ipcRenderer.invoke('graph:save-png', payload),
   openSettings: (): Promise<void> => ipcRenderer.invoke('settings:open'),
   closeSettings: (): Promise<void> => ipcRenderer.invoke('settings:close'),
   // Init Connect 윈도우 lifecycle (REST 호출은 renderer service 계층에서 baseUrl 로 수행).

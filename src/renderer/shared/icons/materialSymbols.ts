@@ -21,7 +21,9 @@ export type IconName =
   | 'add'
   | 'delete'
   | 'edit'
+  | 'image'
   | 'replay'
+  | 'rotate_auto'
   | 'close'
   | 'play_arrow'
   | 'stop';
@@ -45,7 +47,9 @@ const ICON_GLYPHS: Record<IconName, string> = {
   add: '\uE145',
   delete: '\uE872',
   edit: '\uE3C9',
+  image: '\uE3F4',
   replay: '\uE042',
+  rotate_auto: 'rotate_auto',
   close: '\uE5CD',
   play_arrow: '\uE037',
   stop: '\uE047',

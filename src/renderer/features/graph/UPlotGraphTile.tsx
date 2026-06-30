@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ReactElement,
+  type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
 import uPlot from 'uplot';
@@ -16,6 +17,8 @@ import type {
   SeriesPlotStyle,
 } from './graphTypes';
 import { lineStyleToDash, resolveSeriesStyle } from './graphUtils';
+import { savePngImage } from '../../services/backendConnection';
+import { getIconGlyph } from '../../shared/icons/materialSymbols';
 
 export interface UPlotGraphTileProps {
   title: string;
@@ -43,6 +46,33 @@ function buildEmptyData(seriesCount: number): GraphDisplayData {
 
 function formatSeconds(value: number): string {
   return value.toFixed(1);
+}
+
+function sanitizeFileName(value: string): string {
+  const sanitized = value
+    .trim()
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .split('')
+    .map((char) => (char.charCodeAt(0) < 32 ? '_' : char))
+    .join('')
+    .replace(/\s+/g, '_');
+  return sanitized.length > 0 ? sanitized : 'graph';
+}
+
+function canvasToPngDataUrl(sourceCanvas: HTMLCanvasElement): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
+
+  const context = canvas.getContext('2d');
+  if (context == null) {
+    throw new Error('Unable to create PNG canvas.');
+  }
+
+  context.fillStyle = '#151515';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(sourceCanvas, 0, 0);
+  return canvas.toDataURL('image/png');
 }
 
 export function UPlotGraphTile({
@@ -302,6 +332,31 @@ export function UPlotGraphTile({
     handleXRangeChange(nextMin, nextMax);
   };
 
+  const handleSavePng = async (
+    event: ReactMouseEvent<HTMLButtonElement>,
+  ): Promise<void> => {
+    event.stopPropagation();
+    const canvas = plotHostRef.current?.querySelector('canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      alert('Graph image is not ready.');
+      return;
+    }
+
+    try {
+      await savePngImage({
+        dataUrl: canvasToPngDataUrl(canvas),
+        defaultFileName: `${sanitizeFileName(title)}.png`,
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const handleAutoscale = (event: ReactMouseEvent<HTMLButtonElement>): void => {
+    event.stopPropagation();
+    onXRangeReset?.();
+  };
+
   return (
     <section className="graph-tile" ref={containerRef}>
       <div className="graph-tile__header">
@@ -336,6 +391,28 @@ export function UPlotGraphTile({
         onWheel={handleWheel}
         onDoubleClick={onXRangeReset}
       >
+        <div className="graph-tile__axis-actions">
+          <button
+            type="button"
+            className="graph-tile__axis-action"
+            title="Save graph as PNG"
+            onClick={(event) => void handleSavePng(event)}
+          >
+            <span className="material-symbols-outlined graph-tile__axis-action-icon">
+              {getIconGlyph('image')}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="graph-tile__axis-action"
+            title="Autoscale"
+            onClick={handleAutoscale}
+          >
+            <span className="material-symbols-outlined graph-tile__axis-action-icon">
+              {getIconGlyph('rotate_auto')}
+            </span>
+          </button>
+        </div>
         <div className="graph-tile__canvas" ref={plotHostRef} />
         <div className="graph-tile__legend" ref={legendHostRef} />
       </div>

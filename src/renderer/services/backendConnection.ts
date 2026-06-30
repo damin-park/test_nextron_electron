@@ -50,6 +50,16 @@ export async function requestAppShutdown(): Promise<void> {
   return window.nextron.requestAppShutdown();
 }
 
+export async function savePngImage(payload: {
+  dataUrl: string;
+  defaultFileName?: string;
+}): Promise<{ canceled: boolean; filePath?: string }> {
+  if (!hasBridge()) {
+    throw new Error('PNG save is available only in the desktop app.');
+  }
+  return window.nextron.savePngImage(payload);
+}
+
 export async function openSettings(): Promise<void> {
   if (!hasBridge()) {
     return;
