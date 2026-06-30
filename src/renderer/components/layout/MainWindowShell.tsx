@@ -11,7 +11,6 @@
  * 기존 vanilla DOM 구조(mainWindow.ts)와 동일한 계층/클래스를 유지한다.
  */
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
-import { APP_VERSION } from '../../../shared/app-version';
 import { useBackendStatus } from '../../hooks/useBackendStatus';
 import { ConnectionBanner, type BannerKind } from '../status/ConnectionBanner';
 import { Dashboard } from '../../features/dashboard/Dashboard';
@@ -29,12 +28,18 @@ export interface MainWindowShellProps {
   currentMode: ControlMode;
   /** 사이드 메뉴 항목 (preset 에서 생성하여 주입) */
   sideMenuItems: SideMenuItemConfig[];
+  versionLabel: string;
+  onSettings?: () => void;
+  onVersionClick?: () => void;
   onRecipeActiveChange: (active: boolean) => void;
 }
 
 export function MainWindowShell({
   currentMode,
   sideMenuItems,
+  versionLabel,
+  onSettings,
+  onVersionClick,
   onRecipeActiveChange,
 }: MainWindowShellProps): ReactElement {
   const { controlPanelRef, workAreaRef, splitterRef, onPointerDown } = useSplitter();
@@ -133,12 +138,13 @@ export function MainWindowShell({
 
   return (
     <div className="app-root">
-      <MenuBar version={`${APP_VERSION} LAB`} />
+      <MenuBar onSettings={onSettings} />
       <div className="app-body">
         <SideMenu
-          version={APP_VERSION}
+          version={versionLabel}
           currentMode={currentMode}
           items={sideMenuItems}
+          onVersionClick={onVersionClick}
         />
         <div className="main-content">
           <ConnectionBanner

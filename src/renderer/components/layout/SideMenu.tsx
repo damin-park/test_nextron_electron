@@ -19,12 +19,14 @@ export interface SideMenuProps {
   currentMode: ControlMode;
   /** 렌더링할 메뉴 항목 목록 (preset 에서 생성하여 주입) */
   items: SideMenuItemConfig[];
+  onVersionClick?: () => void;
 }
 
 export function SideMenu({
   version,
   currentMode,
   items,
+  onVersionClick,
 }: SideMenuProps): ReactElement {
   const renderItem = (config: SideMenuItemConfig): ReactElement => {
     const disabled = config.disabled === true;
@@ -82,7 +84,13 @@ export function SideMenu({
       <div className="side-menu__group side-menu__group--bottom">
         {items.filter((item) => item.group === 'bottom').map(renderItem)}
       </div>
-      <div className="version-label">{version}</div>
+      <button
+        type="button"
+        className="version-label"
+        onClick={onVersionClick}
+      >
+        {version}
+      </button>
     </div>
   );
 }

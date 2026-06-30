@@ -62,10 +62,10 @@ export function GraphSettingDialog({
     return initial;
   });
 
-  // selected index in the left listbox (available series)
-  const [leftSelected, setLeftSelected] = useState<number | null>(null);
-  // selected index in the right listbox (plots)
-  const [rightSelected, setRightSelected] = useState<number | null>(null);
+  // selected series in the left listbox (available series)
+  const [leftSelectedKeys, setLeftSelectedKeys] = useState<GraphSeriesKey[]>([]);
+  // selected series in the right listbox (plots)
+  const [rightSelectedKeys, setRightSelectedKeys] = useState<GraphSeriesKey[]>([]);
   // whether the color palette popup is open
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
@@ -73,9 +73,9 @@ export function GraphSettingDialog({
   const availableSeries = useMemo(
     () =>
       GRAPH_SERIES_CATALOG.filter(
-        (s) => s.group === selectedGroup,
+        (s) => s.group === selectedGroup && !plottedSeries.includes(s.key),
       ),
-    [selectedGroup],
+    [plottedSeries, selectedGroup],
   );
 
   // When group changes, filter out series that don't belong to the new group
@@ -85,39 +85,69 @@ export function GraphSettingDialog({
         (key) => GRAPH_SERIES_BY_KEY[key].group === selectedGroup,
       ),
     );
-    setLeftSelected(null);
-    setRightSelected(null);
+    setLeftSelectedKeys([]);
+    setRightSelectedKeys([]);
     setColorPickerOpen(false);
   }, [selectedGroup]);
 
-  const selectedKey =
-    rightSelected !== null ? plottedSeries[rightSelected] ?? null : null;
+  const selectedKey = rightSelectedKeys.length === 1 ? rightSelectedKeys[0] : null;
   const selectedStyle =
     selectedKey !== null ? resolveSeriesStyle(selectedKey, seriesStyles) : null;
 
+  const toggleLeftSelection = (key: GraphSeriesKey): void => {
+    setLeftSelectedKeys((current) =>
+      current.includes(key)
+        ? current.filter((selectedKey) => selectedKey !== key)
+        : [...current, key],
+    );
+  };
+
+  const toggleRightSelection = (key: GraphSeriesKey): void => {
+    setRightSelectedKeys((current) =>
+      current.includes(key)
+        ? current.filter((selectedKey) => selectedKey !== key)
+        : [...current, key],
+    );
+    setColorPickerOpen(false);
+  };
+
   const handleAdd = (): void => {
-    if (leftSelected === null) return;
-    const series = availableSeries[leftSelected];
-    if (series && !plottedSeries.includes(series.key)) {
-      setPlottedSeries((prev) => [...prev, series.key]);
-      setSeriesStyles((prev) => ({
-        ...prev,
-        [series.key]: resolveSeriesStyle(series.key, prev),
-      }));
-    }
-    setLeftSelected(null);
+    if (leftSelectedKeys.length === 0) return;
+    const keysToAdd = availableSeries
+      .map((series) => series.key)
+      .filter((key) => leftSelectedKeys.includes(key));
+    if (keysToAdd.length === 0) return;
+
+    setPlottedSeries((prev) => [
+      ...prev,
+      ...keysToAdd.filter((key) => !prev.includes(key)),
+    ]);
+    setSeriesStyles((prev) => {
+      const next = { ...prev };
+      keysToAdd.forEach((key) => {
+        next[key] = resolveSeriesStyle(key, next);
+      });
+      return next;
+    });
+    setLeftSelectedKeys([]);
+    setRightSelectedKeys(keysToAdd);
+    setColorPickerOpen(false);
   };
 
   const handleRemove = (): void => {
-    if (rightSelected === null) return;
-    setPlottedSeries((prev) => prev.filter((_, i) => i !== rightSelected));
-    setRightSelected(null);
+    if (rightSelectedKeys.length === 0) return;
+    setPlottedSeries((prev) =>
+      prev.filter((key) => !rightSelectedKeys.includes(key)),
+    );
+    setLeftSelectedKeys(rightSelectedKeys);
+    setRightSelectedKeys([]);
     setColorPickerOpen(false);
   };
 
   const handleClear = (): void => {
     setPlottedSeries([]);
-    setRightSelected(null);
+    setLeftSelectedKeys([]);
+    setRightSelectedKeys([]);
     setColorPickerOpen(false);
   };
 
@@ -232,11 +262,11 @@ export function GraphSettingDialog({
               <div className="gs-panel__main">
                 <div className="gs-listbox-wrap">
                   <ul className="gs-listbox">
-                    {availableSeries.map((series, i) => (
+                    {availableSeries.map((series) => (
                       <li
                         key={series.key}
-                        className={`gs-listbox__item${leftSelected === i ? ' gs-listbox__item--selected' : ''}`}
-                        onClick={() => setLeftSelected(i === leftSelected ? null : i)}
+                        className={`gs-listbox__item${leftSelectedKeys.includes(series.key) ? ' gs-listbox__item--selected' : ''}`}
+                        onClick={() => toggleLeftSelection(series.key)}
                       >
                         <span
                           className="gs-series-dot"
@@ -256,20 +286,17 @@ export function GraphSettingDialog({
                     type="button"
                     className="gs-btn"
                     onClick={handleAdd}
-                    disabled={
-                      leftSelected === null ||
-                      plottedSeries.includes(availableSeries[leftSelected]?.key ?? '')
-                    }
+                    disabled={leftSelectedKeys.length === 0}
                   >
-                    Add →
+                    Add -&gt;
                   </button>
                   <button
                     type="button"
                     className="gs-btn"
                     onClick={handleRemove}
-                    disabled={rightSelected === null}
+                    disabled={rightSelectedKeys.length === 0}
                   >
-                    ← Remove
+                    &lt;- Remove
                   </button>
                   <button
                     type="button"
@@ -289,17 +316,14 @@ export function GraphSettingDialog({
               <div className="gs-panel__main">
                 <div className="gs-listbox-wrap">
                   <ul className="gs-listbox">
-                    {plottedSeries.map((key, i) => {
+                    {plottedSeries.map((key) => {
                       const def = GRAPH_SERIES_BY_KEY[key];
                       const style = resolveSeriesStyle(key, seriesStyles);
                       return (
                         <li
                           key={key}
-                          className={`gs-listbox__item${rightSelected === i ? ' gs-listbox__item--selected' : ''}`}
-                          onClick={() => {
-                            setRightSelected(i === rightSelected ? null : i);
-                            setColorPickerOpen(false);
-                          }}
+                          className={`gs-listbox__item${rightSelectedKeys.includes(key) ? ' gs-listbox__item--selected' : ''}`}
+                          onClick={() => toggleRightSelection(key)}
                         >
                           <span
                             className="gs-series-dot"
@@ -433,4 +457,3 @@ export function GraphSettingDialog({
     </div>
   );
 }
-

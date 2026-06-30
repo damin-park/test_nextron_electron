@@ -31,7 +31,7 @@ export function ManualTemperatureControl({
   const [setValue, setSetValue] = useState(initialInputs.setValue);
   const [rampingRate, setRampingRate] = useState(initialInputs.rampingRate);
   const [pendingCommand, setPendingCommand] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [, setMessage] = useState<string | null>(null);
   const [optimisticRunMode, setOptimisticRunMode] = useState<boolean | null>(null);
   const lastSubmittedSetValueRef = useRef(setValue);
   const lastSubmittedRampingRateRef = useRef(rampingRate);
@@ -197,13 +197,6 @@ export function ManualTemperatureControl({
     <section className="manual-device-panel">
       <header className="manual-device-panel__header">
         <div className="manual-device-panel__title">Temperature</div>
-        <div
-          className={`manual-device-panel__status${
-            connected ? ' is-connected' : ''
-          }`}
-        >
-          {connected ? 'Connected' : 'Disconnected'}
-        </div>
       </header>
 
       <div className="manual-form">
@@ -263,15 +256,6 @@ export function ManualTemperatureControl({
         </button>
       </div>
 
-      {(message || pendingCommand || safeStopping || !connected) && (
-        <div className={`manual-command-message${message?.endsWith('OK') ? ' is-ok' : ''}`}>
-          {pendingCommand
-            ? `${pendingCommand} pending`
-            : safeStopping
-              ? 'Temperature safe stop is in progress'
-            : message ?? 'Temperature is not connected'}
-        </div>
-      )}
     </section>
   );
 }

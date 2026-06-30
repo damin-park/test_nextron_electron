@@ -39,6 +39,12 @@ export const createSettingsWindow = (
   });
 
   settingsWindow.setMenuBarVisibility(false);
+  settingsWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'Escape') {
+      event.preventDefault();
+      settingsWindow?.close();
+    }
+  });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     void settingsWindow.loadURL(

@@ -7,21 +7,29 @@ import type { ReactElement } from 'react';
 const MENU_ITEMS = ['File', 'Settings', 'Help'];
 
 interface MenuBarProps {
-  version: string;
+  onSettings?: () => void;
 }
 
-export function MenuBar({ version }: MenuBarProps): ReactElement {
+export function MenuBar({ onSettings }: MenuBarProps): ReactElement {
   return (
     <div className="menu-bar">
       <div className="menu-bar__items">
-        {MENU_ITEMS.map((label) => (
-          <div key={label} className="menu-bar__item">
-            {label}
-          </div>
-        ))}
+        {MENU_ITEMS.map((label) => {
+          const isSettings = label === 'Settings';
+          return (
+            <button
+              key={label}
+              type="button"
+              className="menu-bar__item"
+              onClick={isSettings ? onSettings : undefined}
+              disabled={isSettings ? !onSettings : true}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
       <div className="menu-bar__spacer" />
-      <div className="menu-bar__version">{version}</div>
     </div>
   );
 }

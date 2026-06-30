@@ -16,6 +16,15 @@ class MockTransport:
         self._cool_power = 0.0
         self._ramping_rate = 30.0
         self._run_mode = True
+        self._decimal_point = 1
+        self._pid = {
+            "P1": 25.0,
+            "I1": 8.0,
+            "D1": 0.0,
+            "P2": 25.0,
+            "I2": 8.0,
+            "D2": 0.0,
+        }
 
     def open(self, config: dict[str, Any]) -> None:
         self._open = True
@@ -35,13 +44,17 @@ class MockTransport:
                 self._ramping_rate = float(value)
             elif name == "SR":
                 self._run_mode = int(float(value)) == 0
+            elif name == "XU":
+                self._decimal_point = int(float(value))
+            elif name in self._pid:
+                self._pid[name] = float(value)
             else:
                 raise RuntimeError(f"unsupported mock write transaction: {name}")
             return TransportResponse(name=tx.name, raw=b"\x06")
 
         payloads = {
             "ID": "FB100",
-            "XU": "1",
+            "XU": str(self._decimal_point),
             "SR": "0" if self._run_mode else "1",
             "MS": f"{self._sv:.1f}",
             "S1": f"{self._sv:.1f}",
@@ -50,6 +63,7 @@ class MockTransport:
             "HH": f"{self._ramping_rate:.1f}",
             "O1": f"{self._hot_power:.1f}",
             "O2": f"{self._cool_power:.1f}",
+            **{name: f"{value:g}" for name, value in self._pid.items()},
         }
         if tx.name == "M1":
             self._pv += 0.01

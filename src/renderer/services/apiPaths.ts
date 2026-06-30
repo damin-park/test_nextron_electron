@@ -16,6 +16,10 @@ export const tempPath = {
   setpoint: (id: string) => `${DEVICES_BASE}/temperature/${id}/setpoint`,
   rampingRate: (id: string) =>
     `${DEVICES_BASE}/temperature/${id}/ramping-rate`,
+  settings: (id: string) => `${DEVICES_BASE}/temperature/${id}/settings`,
+  settingsPid: (id: string) => `${DEVICES_BASE}/temperature/${id}/settings/pid`,
+  settingsDecimalPoint: (id: string) =>
+    `${DEVICES_BASE}/temperature/${id}/settings/decimal-point`,
   run: (id: string) => `${DEVICES_BASE}/temperature/${id}/run`,
   stop: (id: string) => `${DEVICES_BASE}/temperature/${id}/stop`,
   manualStart: (id: string) => `${DEVICES_BASE}/temperature/${id}/manual/start`,

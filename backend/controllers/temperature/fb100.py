@@ -37,6 +37,36 @@ class FB100:
             return [self._write_transaction("S1", command.payload["value"])]
         if action == "write_ramping_rate":
             return [self._read_transaction("HU")]
+        if action == "read_heat_pid":
+            return [
+                self._read_transaction("P1"),
+                self._read_transaction("I1"),
+                self._read_transaction("D1"),
+            ]
+        if action == "read_cool_pid":
+            return [
+                self._read_transaction("P2"),
+                self._read_transaction("I2"),
+                self._read_transaction("D2"),
+            ]
+        if action == "write_heat_pid":
+            values = command.payload["values"]
+            return [
+                self._write_transaction("P1", values["p"]),
+                self._write_transaction("I1", values["i"]),
+                self._write_transaction("D1", values["d"]),
+            ]
+        if action == "write_cool_pid":
+            values = command.payload["values"]
+            return [
+                self._write_transaction("P2", values["p"]),
+                self._write_transaction("I2", values["i"]),
+                self._write_transaction("D2", values["d"]),
+            ]
+        if action == "read_decimal_point":
+            return [self._read_transaction("XU")]
+        if action == "write_decimal_point":
+            return [self._write_transaction("XU", command.payload["value"])]
         if action == "set_run_mode":
             return [self._write_transaction("SR", 0)]
         if action == "set_stop_mode":
@@ -115,6 +145,67 @@ class FB100:
                     ok=True,
                     device_id=command.device_id,
                     data={"rampingRate": value, "rampingRateUnit": "°C/min"},
+                )
+
+            if action == "read_heat_pid":
+                return CommandResult(
+                    command_id=command.command_id,
+                    ok=True,
+                    device_id=command.device_id,
+                    data={"heat": self._parse_pid(responses, "P1", "I1", "D1")},
+                )
+
+            if action == "read_cool_pid":
+                return CommandResult(
+                    command_id=command.command_id,
+                    ok=True,
+                    device_id=command.device_id,
+                    data={"cool": self._parse_pid(responses, "P2", "I2", "D2")},
+                )
+
+            if action == "write_heat_pid":
+                self._require_ack(responses, "P1")
+                self._require_ack(responses, "I1")
+                self._require_ack(responses, "D1")
+                return CommandResult(
+                    command_id=command.command_id,
+                    ok=True,
+                    device_id=command.device_id,
+                    data={"heat": dict(command.payload["values"])},
+                )
+
+            if action == "write_cool_pid":
+                self._require_ack(responses, "P2")
+                self._require_ack(responses, "I2")
+                self._require_ack(responses, "D2")
+                return CommandResult(
+                    command_id=command.command_id,
+                    ok=True,
+                    device_id=command.device_id,
+                    data={"cool": dict(command.payload["values"])},
+                )
+
+            if action == "read_decimal_point":
+                value = int(self._response_payload(responses, "XU"))
+                if value not in (0, 1):
+                    raise RuntimeError(f"invalid decimal point value: {value}")
+                return CommandResult(
+                    command_id=command.command_id,
+                    ok=True,
+                    device_id=command.device_id,
+                    data={"decimalPoint": value},
+                )
+
+            if action == "write_decimal_point":
+                self._require_ack(responses, "XU")
+                value = int(command.payload["value"])
+                if value not in (0, 1):
+                    raise RuntimeError(f"invalid decimal point value: {value}")
+                return CommandResult(
+                    command_id=command.command_id,
+                    ok=True,
+                    device_id=command.device_id,
+                    data={"decimalPoint": value},
                 )
 
             if action == "set_run_mode":
@@ -218,6 +309,19 @@ class FB100:
             self._write_transaction("HL", raw_rate),
             self._write_transaction("HH", raw_rate),
         ]
+
+    def _parse_pid(
+        self,
+        responses: list[TransportResponse],
+        p_name: str,
+        i_name: str,
+        d_name: str,
+    ) -> dict[str, float]:
+        return {
+            "p": float(self._response_payload(responses, p_name)),
+            "i": float(self._response_payload(responses, i_name)),
+            "d": float(self._response_payload(responses, d_name)),
+        }
 
     def _read_transaction(self, name: str) -> ProtocolTransaction:
         request = f"{EOT}{self._channel:02d}{name}{ENQ}{EOT}".encode()

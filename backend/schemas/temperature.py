@@ -13,6 +13,21 @@ class TemperatureRampingRateRequest(BaseModel):
     value: float
 
 
+class TemperaturePidValues(BaseModel):
+    p: float
+    i: float
+    d: float
+
+
+class TemperaturePidSettingsRequest(BaseModel):
+    heat: Optional[TemperaturePidValues] = None
+    cool: Optional[TemperaturePidValues] = None
+
+
+class TemperatureDecimalPointRequest(BaseModel):
+    value: int
+
+
 class TemperatureConnectRequest(BaseModel):
     """신규 command-based connect endpoint 용 request.
 
@@ -27,7 +42,7 @@ class TemperatureConnectRequest(BaseModel):
 
 
 class TemperaturePollingStartRequest(BaseModel):
-    intervalSec: float = 1.0
+    intervalSec: Optional[float] = None
 
 
 class TemperatureManualStartRequest(BaseModel):

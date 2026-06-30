@@ -20,7 +20,9 @@ from backend.schemas.command import (
 )
 from backend.schemas.temperature import (
     TemperatureConnectRequest,
+    TemperatureDecimalPointRequest,
     TemperatureManualStartRequest,
+    TemperaturePidSettingsRequest,
     TemperaturePollingStartRequest,
     TemperatureRecipeStepStartRequest,
 )
@@ -184,6 +186,107 @@ class TemperatureService:
         future = self._actor.submit(command)
         return await self._await(future, command.command_id, device_id, command.timeout_sec)
 
+    async def read_settings(self, device_id: str) -> CommandResult:
+        heat = await self._submit_temperature_settings_command(
+            device_id=device_id,
+            action="read_heat_pid",
+            payload={},
+        )
+        if not heat.ok:
+            return heat
+
+        cool = await self._submit_temperature_settings_command(
+            device_id=device_id,
+            action="read_cool_pid",
+            payload={},
+        )
+        if not cool.ok:
+            return cool
+
+        decimal = await self._submit_temperature_settings_command(
+            device_id=device_id,
+            action="read_decimal_point",
+            payload={},
+        )
+        if not decimal.ok:
+            return decimal
+
+        state = self._state_manager.get_temperature_state(device_id) or {}
+        return CommandResult(
+            command_id=decimal.command_id,
+            ok=True,
+            device_id=device_id,
+            data={
+                "model": state.get("model"),
+                "heat": heat.data.get("heat"),
+                "cool": cool.data.get("cool"),
+                "decimalPoint": decimal.data.get("decimalPoint"),
+            },
+        )
+
+    async def write_pid_settings(
+        self, device_id: str, request: TemperaturePidSettingsRequest
+    ) -> CommandResult:
+        result_data = {}
+        command_id = str(uuid.uuid4())
+
+        if request.heat is not None:
+            heat = await self._submit_temperature_settings_command(
+                device_id=device_id,
+                action="write_heat_pid",
+                payload={"values": request.heat.dict()},
+            )
+            command_id = heat.command_id
+            if not heat.ok:
+                return heat
+            result_data.update(heat.data)
+
+        if request.cool is not None:
+            cool = await self._submit_temperature_settings_command(
+                device_id=device_id,
+                action="write_cool_pid",
+                payload={"values": request.cool.dict()},
+            )
+            command_id = cool.command_id
+            if not cool.ok:
+                return cool
+            result_data.update(cool.data)
+
+        return CommandResult(
+            command_id=command_id,
+            ok=True,
+            device_id=device_id,
+            data=result_data,
+        )
+
+    async def write_decimal_point(
+        self, device_id: str, request: TemperatureDecimalPointRequest
+    ) -> CommandResult:
+        return await self._submit_temperature_settings_command(
+            device_id=device_id,
+            action="write_decimal_point",
+            payload={"value": request.value},
+        )
+
+    async def _submit_temperature_settings_command(
+        self,
+        device_id: str,
+        action: str,
+        payload: dict,
+    ) -> CommandResult:
+        command = DeviceCommand(
+            device_id=device_id,
+            device_type="temperature",
+            queue_type=CommandQueueType.CONTROL,
+            action=action,
+            payload=payload,
+            response_mode=ResponseMode.WAIT,
+            timeout_sec=8.0,
+            context={"origin": "settings"},
+        )
+        future = self._actor.submit(command)
+        return await self._await(future, command.command_id, device_id, command.timeout_sec)
+
     async def start_polling(
         self,
         device_id: str,
@@ -196,7 +299,7 @@ class TemperatureService:
             command_id=command_id,
             ok=True,
             device_id=device_id,
-            data={"polling": True, "intervalSec": req.intervalSec},
+            data={"polling": True, "intervalSec": self._actor.get_polling_interval()},
         )
 
     async def stop_polling(self, device_id: str) -> CommandResult:

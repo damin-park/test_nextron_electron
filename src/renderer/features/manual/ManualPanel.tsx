@@ -83,7 +83,6 @@ function ManualGapPanel({
     <section className="manual-device-panel">
       <header className="manual-device-panel__header">
         <div className="manual-device-panel__title">{device.title}</div>
-        <div className="manual-device-panel__status">Unavailable</div>
       </header>
       <div className="manual-gap manual-gap--large">
         {device.gap ?? 'Backend endpoint missing'}

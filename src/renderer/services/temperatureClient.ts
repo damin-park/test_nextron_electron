@@ -73,7 +73,7 @@ export function startTemperaturePolling(
   intervalSec?: number,
 ): Promise<ApiCommandResponse> {
   return apiPost<ApiCommandResponse>(tempPath.pollingStart(deviceId), {
-    intervalSec: intervalSec ?? 1.0,
+    ...(intervalSec === undefined ? {} : { intervalSec }),
   });
 }
 
@@ -99,6 +99,46 @@ export function writeTemperatureRampingRate(
   value: number,
 ): Promise<ApiCommandResponse> {
   return apiPost<ApiCommandResponse>(tempPath.rampingRate(deviceId), { value });
+}
+
+export interface TemperaturePidValues {
+  p: number;
+  i: number;
+  d: number;
+}
+
+export interface TemperatureSettingsData {
+  model?: string | null;
+  heat?: TemperaturePidValues | null;
+  cool?: TemperaturePidValues | null;
+  decimalPoint?: number | null;
+}
+
+export interface TemperaturePidSettingsRequest {
+  heat?: TemperaturePidValues;
+  cool?: TemperaturePidValues;
+}
+
+export function getTemperatureSettings(
+  deviceId: string,
+): Promise<ApiCommandResponse> {
+  return apiGet<ApiCommandResponse>(tempPath.settings(deviceId));
+}
+
+export function writeTemperaturePidSettings(
+  deviceId: string,
+  body: TemperaturePidSettingsRequest,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.settingsPid(deviceId), body);
+}
+
+export function writeTemperatureDecimalPoint(
+  deviceId: string,
+  value: number,
+): Promise<ApiCommandResponse> {
+  return apiPost<ApiCommandResponse>(tempPath.settingsDecimalPoint(deviceId), {
+    value,
+  });
 }
 
 export function setTemperatureRunMode(

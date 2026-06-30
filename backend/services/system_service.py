@@ -129,3 +129,6 @@ class SystemService:
             "safeStopRequired": bool(safe_stop_info),
             "safeStopInfo": safe_stop_info,
         }
+
+    def set_data_update_interval(self, interval_sec: float) -> None:
+        self._temperature_actor.set_polling_interval(interval_sec)

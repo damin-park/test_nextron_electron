@@ -14,13 +14,23 @@
   color: var(--md3-on-surface-variant);
   padding: 4px 10px;
   border-radius: 4px;
+  border: 0;
+  background: transparent;
   cursor: default;
   line-height: 1;
 }
 
-.menu-bar__item:hover {
+.menu-bar__item:not(:disabled) {
+  cursor: pointer;
+}
+
+.menu-bar__item:hover:not(:disabled) {
   background: #3a3a3a;
   color: var(--md3-on-surface);
+}
+
+.menu-bar__item:disabled {
+  opacity: 1;
 }
 
 .menu-bar__spacer {
@@ -155,6 +165,9 @@
   font-family: var(--font-medium);
   font-size: 11px;
   color: var(--md3-text-disabled);
+  background: transparent;
+  border: 0;
+  padding: 0;
   cursor: default;
   border-top: 1px solid var(--md3-outline-variant);
 }
@@ -1180,6 +1193,287 @@
   padding: 0;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+/* Interval Settings Panel */
+.interval-settings {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--md3-surface-container-low);
+  overflow-y: auto;
+}
+
+.interval-settings__body {
+  flex: 1 1 auto;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.interval-settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+  background: var(--md3-surface-container);
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.interval-settings__title {
+  font-family: var(--font-medium);
+  font-size: 14px;
+  color: var(--md3-on-surface);
+}
+
+.interval-settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.interval-settings__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.interval-settings__label {
+  flex: 0 0 100px;
+  font-family: var(--font-medium);
+  font-size: 12px;
+  color: var(--md3-on-surface-variant);
+}
+
+.interval-settings__input {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 32px;
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 4px;
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+  font-family: var(--font-base);
+  font-size: 13px;
+  padding: 0 8px;
+  outline: none;
+}
+
+.interval-settings__input:focus {
+  border-color: var(--md3-primary);
+}
+
+.interval-settings__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.interval-settings__meta {
+  font-size: 12px;
+  color: var(--md3-text-disabled);
+}
+
+.interval-settings__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.interval-settings__btn {
+  height: 32px;
+  min-width: 96px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface-variant);
+  font-family: var(--font-medium);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.interval-settings__btn:hover:not(:disabled) {
+  background: var(--md3-surface-container-highest);
+  color: var(--md3-on-surface);
+}
+
+.interval-settings__btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.interval-settings__btn--primary {
+  border-color: #34c759;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.interval-settings__message {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(210, 0, 0, 0.3);
+  background: rgba(210, 0, 0, 0.12);
+  color: #ff6b6b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.interval-settings__message.is-ok {
+  border-color: rgba(52, 199, 89, 0.32);
+  background: rgba(52, 199, 89, 0.1);
+  color: #70d88b;
+}
+
+/* Temperature Controller Settings Panel */
+.temp-settings-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--md3-surface-container-low);
+  overflow-y: auto;
+}
+
+.temp-settings-panel__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.temp-settings-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--md3-surface-container);
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.temp-settings-panel__title {
+  font-family: var(--font-medium);
+  font-size: 14px;
+  color: var(--md3-on-surface);
+}
+
+.temp-settings-panel__pid-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.temp-settings-panel__pid-cell,
+.temp-settings-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.temp-settings-panel__pid-cell {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.temp-settings-panel__label {
+  font-family: var(--font-medium);
+  font-size: 12px;
+  color: var(--md3-on-surface-variant);
+}
+
+.temp-settings-panel__row .temp-settings-panel__label {
+  flex: 0 0 110px;
+}
+
+.temp-settings-panel__input,
+.temp-settings-panel__select {
+  height: 32px;
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 4px;
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+  font-family: var(--font-base);
+  font-size: 13px;
+  padding: 0 8px;
+  outline: none;
+  min-width: 0;
+}
+
+.temp-settings-panel__input {
+  width: 100%;
+}
+
+.temp-settings-panel__select {
+  flex: 1 1 auto;
+}
+
+.temp-settings-panel__input:focus,
+.temp-settings-panel__select:focus {
+  border-color: var(--md3-primary);
+}
+
+.temp-settings-panel__input:disabled,
+.temp-settings-panel__select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.temp-settings-panel__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.temp-settings-panel__btn {
+  height: 32px;
+  min-width: 120px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface-variant);
+  font-family: var(--font-medium);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.temp-settings-panel__btn:hover:not(:disabled) {
+  background: var(--md3-surface-container-highest);
+  color: var(--md3-on-surface);
+}
+
+.temp-settings-panel__btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.temp-settings-panel__btn--primary {
+  border-color: #34c759;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.temp-settings-panel__message {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(210, 0, 0, 0.3);
+  background: rgba(210, 0, 0, 0.12);
+  color: #ff6b6b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.temp-settings-panel__message.is-ok {
+  border-color: rgba(52, 199, 89, 0.32);
+  background: rgba(52, 199, 89, 0.1);
+  color: #70d88b;
 }
 
 /* Manual Panel */

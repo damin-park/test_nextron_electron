@@ -94,12 +94,23 @@ class TemperatureActor:
         self._scheduler.enqueue(command)
         return future
 
-    def start_polling(self, device_id: str, interval_sec: float = 1.0) -> None:
+    def get_polling_interval(self) -> float:
+        return self._polling_interval_sec
+
+    def set_polling_interval(self, interval_sec: float) -> None:
+        self._polling_interval_sec = max(float(interval_sec), 0.5)
+        if self._polling_active and self._polling_device_id:
+            self._state_manager.update_temperature_state(
+                self._polling_device_id, {"intervalSec": self._polling_interval_sec}
+            )
+
+    def start_polling(self, device_id: str, interval_sec: float | None = None) -> None:
         if self._polling_active:
             self.stop_polling()
 
         self._polling_device_id = device_id
-        self._polling_interval_sec = interval_sec
+        if interval_sec is not None:
+            self.set_polling_interval(interval_sec)
         self._polling_stop_event.clear()
         self._poll_pending.clear()
         self._polling_thread = threading.Thread(
@@ -110,12 +121,12 @@ class TemperatureActor:
         self._polling_thread.start()
         self._polling_active = True
         self._state_manager.update_temperature_state(
-            device_id, {"polling": True, "intervalSec": interval_sec}
+            device_id, {"polling": True, "intervalSec": self._polling_interval_sec}
         )
         logger.info(
             "[TemperatureActor] polling started device=%s interval=%.1fs",
             device_id,
-            interval_sec,
+            self._polling_interval_sec,
         )
 
     def stop_polling(self) -> None:
@@ -203,7 +214,16 @@ class TemperatureActor:
             return self._run_safe_stop_mode(command)
         if action == "force_stop_mode":
             return self._run_force_stop_mode(command)
-        if action in ("write_setpoint", "set_run_mode"):
+        if action in (
+            "write_setpoint",
+            "set_run_mode",
+            "read_heat_pid",
+            "read_cool_pid",
+            "write_heat_pid",
+            "write_cool_pid",
+            "read_decimal_point",
+            "write_decimal_point",
+        ):
             return self._run_control(command)
         if action == "write_ramping_rate":
             return self._run_write_ramping_rate(command)
@@ -913,10 +933,10 @@ class TemperatureActor:
 
     def _polling_loop(self) -> None:
         device_id = self._polling_device_id
-        interval_sec = self._polling_interval_sec
         next_tick = time.monotonic()
 
         while not self._polling_stop_event.is_set():
+            interval_sec = self._polling_interval_sec
             next_tick += interval_sec
             if not self._poll_pending.is_set():
                 self._poll_pending.set()

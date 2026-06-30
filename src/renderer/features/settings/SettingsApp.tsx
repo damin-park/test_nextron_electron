@@ -8,6 +8,8 @@
  */
 import { useState, type ReactElement } from 'react';
 import { ConnectionSettings } from './ConnectionSettings';
+import { IntervalSettings } from './IntervalSettings';
+import { TemperatureSettings } from './TemperatureSettings';
 
 interface SettingsMenuItem {
   id: string;
@@ -19,7 +21,7 @@ interface SettingsMenuItem {
 const MENU_ITEMS: SettingsMenuItem[] = [
   { id: 'interval', label: 'Interval Setting', alwaysEnabled: true },
   { id: 'connection', label: 'Connection', alwaysEnabled: true },
-  { id: 'temperature', label: 'Temperature Controller', alwaysEnabled: false },
+  { id: 'temperature', label: 'Temperature Controller', alwaysEnabled: true },
   { id: 'mfc', label: 'MFC Controller', alwaysEnabled: false },
   { id: 'humidity', label: 'Humidity Controller', alwaysEnabled: false },
   { id: 'pressure', label: 'Pressure Controller', alwaysEnabled: false },
@@ -57,8 +59,12 @@ export function SettingsApp(): ReactElement {
 
       {/* ─── 우측 상세 ─── */}
       <section className="settings-window__detail">
-        {selected === 'connection' ? (
+        {selected === 'interval' ? (
+          <IntervalSettings />
+        ) : selected === 'connection' ? (
           <ConnectionSettings />
+        ) : selected === 'temperature' ? (
+          <TemperatureSettings />
         ) : (
           <div className="settings-window__placeholder">
             준비 중입니다.

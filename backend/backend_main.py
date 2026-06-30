@@ -8,6 +8,7 @@ from backend.router import api_router
 from backend.schemas.device import DeviceMode
 from backend.services.mfc_service import MfcService
 from backend.services.measurement_service import MeasurementService
+from backend.services.app_settings_service import AppSettingsService
 from backend.services.system_service import SystemService
 from backend.services.temperature_service import TemperatureService
 from backend.state.state_manager import StateManager
@@ -26,6 +27,8 @@ async def lifespan(app: FastAPI):
 
     # StateManager (thread-safe in-memory)
     state_manager = StateManager()
+    app_settings_service = AppSettingsService()
+    data_update_interval = app_settings_service.get_data_update_interval()
 
     # Telemetry broadcaster — StateManager 업데이트 시 최신 snapshot 을
     # WebSocket client 들에게 push 한다. 현재 event loop 를 bind 하고
@@ -52,10 +55,12 @@ async def lifespan(app: FastAPI):
         controller=FB100(),
         transport=transport,
     )
+    temperature_actor.set_polling_interval(data_update_interval)
     temperature_actor.start()
 
     # app.state에 long-lived 인스턴스 등록
     app.state.state_manager = state_manager
+    app.state.app_settings_service = app_settings_service
     app.state.telemetry_broadcaster = telemetry_broadcaster
     app.state.temperature_actor = temperature_actor
     temperature_service = TemperatureService(

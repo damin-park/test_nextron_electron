@@ -24,7 +24,9 @@ from fastapi import APIRouter, Request
 from backend.schemas.common_response import ApiCommandResponse, to_api_response
 from backend.schemas.temperature import (
     TemperatureConnectRequest,
+    TemperatureDecimalPointRequest,
     TemperatureManualStartRequest,
+    TemperaturePidSettingsRequest,
     TemperaturePollingStartRequest,
     TemperatureRampingRateRequest,
     TemperatureRecipeStepStartRequest,
@@ -81,6 +83,31 @@ async def ramping_rate(
 ) -> ApiCommandResponse:
     svc: TemperatureService = request.app.state.temperature_service
     result = await svc.write_ramping_rate(device_id=device_id, value=body.value)
+    return to_api_response(result)
+
+
+@router.get("/{device_id}/settings", response_model=ApiCommandResponse)
+async def get_settings(device_id: str, request: Request) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.read_settings(device_id=device_id)
+    return to_api_response(result)
+
+
+@router.post("/{device_id}/settings/pid", response_model=ApiCommandResponse)
+async def set_pid_settings(
+    device_id: str, body: TemperaturePidSettingsRequest, request: Request
+) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.write_pid_settings(device_id=device_id, request=body)
+    return to_api_response(result)
+
+
+@router.post("/{device_id}/settings/decimal-point", response_model=ApiCommandResponse)
+async def set_decimal_point(
+    device_id: str, body: TemperatureDecimalPointRequest, request: Request
+) -> ApiCommandResponse:
+    svc: TemperatureService = request.app.state.temperature_service
+    result = await svc.write_decimal_point(device_id=device_id, request=body)
     return to_api_response(result)
 
 
