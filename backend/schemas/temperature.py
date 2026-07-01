@@ -54,6 +54,8 @@ class TemperatureCommandStepResult(BaseModel):
     action: str
     ok: bool
     error: Optional[str] = None
+    durationMs: Optional[float] = None
+    timing: Optional[Dict[str, Any]] = None
 
 
 class TemperatureManualStartResponse(BaseModel):
@@ -63,6 +65,7 @@ class TemperatureManualStartResponse(BaseModel):
     steps: List[TemperatureCommandStepResult]
     failedStep: Optional[str] = None
     error: Optional[str] = None
+    timing: Optional[Dict[str, Any]] = None
     state: Optional[Dict[str, Any]] = None
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,6 +14,11 @@ from backend.services.system_service import SystemService
 from backend.services.temperature_service import TemperatureService
 from backend.state.state_manager import StateManager
 from backend.telemetry.websocket_manager import TelemetryBroadcaster
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s:%(message)s",
+)
 
 
 @asynccontextmanager

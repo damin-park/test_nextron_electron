@@ -19,6 +19,10 @@ class FB100:
         self._channel = channel
 
     def build_transactions(self, command: DeviceCommand) -> list[ProtocolTransaction]:
+        """
+        Build FB100 protocol transactions for the given command.
+        Returns a list of ProtocolTransaction objects, which can be sent to the device.
+        """
         action = command.action
         if action in ("probe", "connect"):
             return [self._read_transaction("ID")]

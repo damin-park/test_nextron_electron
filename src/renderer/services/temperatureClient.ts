@@ -162,12 +162,15 @@ export interface TemperatureCommandStepResult {
   action: string;
   ok: boolean;
   error?: string | null;
+  durationMs?: number;
+  timing?: Record<string, unknown> | null;
 }
 
 export interface TemperatureManualStartResponseData {
   action: string;
   steps: TemperatureCommandStepResult[];
   failedStep?: string | null;
+  timing?: Record<string, unknown> | null;
   state?: Record<string, unknown> | null;
 }
 

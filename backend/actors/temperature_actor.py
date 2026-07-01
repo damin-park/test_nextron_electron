@@ -362,7 +362,10 @@ class TemperatureActor:
                 device_id=command.device_id,
                 error="Temperature device is not connected",
             )
+        timing: dict[str, Any] = {}
+        hu_started_at = time.perf_counter()
         hu_responses = self._run_transactions(command)
+        timing["huReadMs"] = self._elapsed_ms(hu_started_at)
         hu_response = next(
             (response for response in hu_responses if response.name == "HU"),
             None,
@@ -375,12 +378,34 @@ class TemperatureActor:
                 error="missing FB100 HU response",
             )
 
+        build_started_at = time.perf_counter()
         write_transactions = self._controller.build_ramping_write_transactions(
             float(command.payload["value"]),
             hu_response,
         )
-        responses = [self._transaction(tx) for tx in write_transactions]
-        return self._controller.parse_result(command, responses)
+        timing["buildWriteTransactionsMs"] = self._elapsed_ms(build_started_at)
+
+        responses = []
+        write_timings: list[dict[str, Any]] = []
+        for tx in write_transactions:
+            tx_started_at = time.perf_counter()
+            response = self._transaction(tx)
+            write_timings.append(
+                {
+                    "name": getattr(tx, "name", None),
+                    "durationMs": self._elapsed_ms(tx_started_at),
+                }
+            )
+            responses.append(response)
+        timing["writes"] = write_timings
+
+        parse_started_at = time.perf_counter()
+        result = self._controller.parse_result(command, responses)
+        timing["parseResultMs"] = self._elapsed_ms(parse_started_at)
+        if result.data is None:
+            result.data = {}
+        result.data["timing"] = timing
+        return result
 
     def _run_manual_start(self, command: DeviceCommand) -> CommandResult:
         """Composite command: write_setpoint → write_ramping_rate → set_run_mode.
@@ -407,7 +432,9 @@ class TemperatureActor:
         set_value: float = float(command.payload["setValue"])
         ramping_rate: float = float(command.payload["rampingRate"])
 
+        total_started_at = time.perf_counter()
         steps: list[dict[str, Any]] = []
+        steps_ms: dict[str, float] = {}
 
         # ── Step 1: write_setpoint ────────────────────────────────────────
         sp_cmd = DeviceCommand(
@@ -419,14 +446,30 @@ class TemperatureActor:
             response_mode=command.response_mode,
             context={"origin": "manual_start"},
         )
+        step_started_at = time.perf_counter()
         sp_result = self._run_control(sp_cmd)
-        steps.append({"action": "write_setpoint", "ok": sp_result.ok, "error": sp_result.error})
         if sp_result.ok and sp_result.data:
             self._state_manager.update_temperature_state(
                 command.device_id,
                 {**sp_result.data, "error": None},
             )
+        duration_ms = self._elapsed_ms(step_started_at)
+        steps_ms["write_setpoint"] = duration_ms
+        steps.append(
+            {
+                "action": "write_setpoint",
+                "ok": sp_result.ok,
+                "error": sp_result.error,
+                "durationMs": duration_ms,
+            }
+        )
         if not sp_result.ok:
+            timing = self._manual_start_timing(total_started_at, steps_ms)
+            logger.info(
+                "[TemperatureActor] manual_start timing device=%s failedStep=write_setpoint timing=%s",
+                command.device_id,
+                timing,
+            )
             return CommandResult(
                 command_id=command.command_id,
                 ok=False,
@@ -436,6 +479,7 @@ class TemperatureActor:
                     "action": "manual_start",
                     "failedStep": "write_setpoint",
                     "steps": steps,
+                    "timing": timing,
                 },
             )
 
@@ -449,14 +493,31 @@ class TemperatureActor:
             response_mode=command.response_mode,
             context={"origin": "manual_start"},
         )
+        step_started_at = time.perf_counter()
         rr_result = self._run_write_ramping_rate(rr_cmd)
-        steps.append({"action": "write_ramping_rate", "ok": rr_result.ok, "error": rr_result.error})
         if rr_result.ok and rr_result.data:
             self._state_manager.update_temperature_state(
                 command.device_id,
                 {**rr_result.data, "error": None},
             )
+        duration_ms = self._elapsed_ms(step_started_at)
+        steps_ms["write_ramping_rate"] = duration_ms
+        steps.append(
+            {
+                "action": "write_ramping_rate",
+                "ok": rr_result.ok,
+                "error": rr_result.error,
+                "durationMs": duration_ms,
+                "timing": (rr_result.data or {}).get("timing"),
+            }
+        )
         if not rr_result.ok:
+            timing = self._manual_start_timing(total_started_at, steps_ms)
+            logger.info(
+                "[TemperatureActor] manual_start timing device=%s failedStep=write_ramping_rate timing=%s",
+                command.device_id,
+                timing,
+            )
             return CommandResult(
                 command_id=command.command_id,
                 ok=False,
@@ -466,6 +527,7 @@ class TemperatureActor:
                     "action": "manual_start",
                     "failedStep": "write_ramping_rate",
                     "steps": steps,
+                    "timing": timing,
                 },
             )
 
@@ -479,14 +541,30 @@ class TemperatureActor:
             response_mode=command.response_mode,
             context={"origin": "manual_start"},
         )
+        step_started_at = time.perf_counter()
         run_result = self._run_control(run_cmd)
-        steps.append({"action": "set_run_mode", "ok": run_result.ok, "error": run_result.error})
         if run_result.ok and run_result.data:
             self._state_manager.update_temperature_state(
                 command.device_id,
                 {**run_result.data, "error": None},
             )
+        duration_ms = self._elapsed_ms(step_started_at)
+        steps_ms["set_run_mode"] = duration_ms
+        steps.append(
+            {
+                "action": "set_run_mode",
+                "ok": run_result.ok,
+                "error": run_result.error,
+                "durationMs": duration_ms,
+            }
+        )
         if not run_result.ok:
+            timing = self._manual_start_timing(total_started_at, steps_ms)
+            logger.info(
+                "[TemperatureActor] manual_start timing device=%s failedStep=set_run_mode timing=%s",
+                command.device_id,
+                timing,
+            )
             return CommandResult(
                 command_id=command.command_id,
                 ok=False,
@@ -496,11 +574,23 @@ class TemperatureActor:
                     "action": "manual_start",
                     "failedStep": "set_run_mode",
                     "steps": steps,
+                    "timing": timing,
                 },
             )
 
         # ── All steps succeeded ───────────────────────────────────────────
+        state_started_at = time.perf_counter()
         final_state = self._state_manager.get_temperature_state(command.device_id) or {}
+        timing = self._manual_start_timing(
+            total_started_at,
+            steps_ms,
+            {"stateResponseMs": self._elapsed_ms(state_started_at)},
+        )
+        logger.info(
+            "[TemperatureActor] manual_start timing device=%s timing=%s",
+            command.device_id,
+            timing,
+        )
         return CommandResult(
             command_id=command.command_id,
             ok=True,
@@ -508,6 +598,7 @@ class TemperatureActor:
             data={
                 "action": "manual_start",
                 "steps": steps,
+                "timing": timing,
                 "state": final_state,
             },
         )
@@ -924,6 +1015,24 @@ class TemperatureActor:
             return float(value)
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _elapsed_ms(started_at: float) -> float:
+        return round((time.perf_counter() - started_at) * 1000.0, 3)
+
+    def _manual_start_timing(
+        self,
+        total_started_at: float,
+        steps_ms: dict[str, float],
+        extra: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        timing: dict[str, Any] = {
+            "totalMs": self._elapsed_ms(total_started_at),
+            "stepsMs": dict(steps_ms),
+        }
+        if extra:
+            timing.update(extra)
+        return timing
 
     def _run_transactions(self, command: DeviceCommand) -> list[TransportResponse]:
         transactions = self._controller.build_transactions(command)
