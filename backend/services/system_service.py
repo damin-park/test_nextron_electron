@@ -13,7 +13,7 @@ from backend.schemas.command import (
     ResponseMode,
 )
 from backend.services.temperature_service import TemperatureService
-from backend.state.state_manager import StateManager
+from backend.managers.state_manager import StateManager
 
 
 TEMPERATURE_DEVICE_ID = "temperature-1"

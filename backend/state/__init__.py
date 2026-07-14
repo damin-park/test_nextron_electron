@@ -1,3 +1,3 @@
-from backend.state.state_manager import StateManager
+from backend.managers.state_manager import StateManager
 
 __all__ = ["StateManager"]

@@ -28,7 +28,7 @@ from backend.schemas.temperature import (
     TemperaturePollingStartRequest,
     TemperatureRecipeStepStartRequest,
 )
-from backend.state.state_manager import StateManager
+from backend.managers.state_manager import StateManager
 
 
 class TemperatureService:

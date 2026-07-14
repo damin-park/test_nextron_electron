@@ -12,7 +12,7 @@ from backend.services.measurement_service import MeasurementService
 from backend.services.app_settings_service import AppSettingsService
 from backend.services.system_service import SystemService
 from backend.services.temperature_service import TemperatureService
-from backend.state.state_manager import StateManager
+from backend.managers.state_manager import StateManager
 from backend.telemetry.websocket_manager import TelemetryBroadcaster
 
 logging.basicConfig(

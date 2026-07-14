@@ -21,7 +21,7 @@ from backend.schemas.command import (
     DeviceCommand,
     ResponseMode,
 )
-from backend.state.state_manager import StateManager
+from backend.managers.state_manager import StateManager
 from backend.transports.protocol import TransportResponse
 
 logger = logging.getLogger(__name__)
