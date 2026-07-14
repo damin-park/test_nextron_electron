@@ -12,6 +12,13 @@ declare global {
       getBackendConnection: () => Promise<BackendConnectionInfo>;
       getBackendStatus: () => Promise<BackendRuntimeStatus>;
       requestAppShutdown: () => Promise<void>;
+      minimizeWindow: () => Promise<void>;
+      toggleMaximizeWindow: () => Promise<boolean>;
+      isWindowMaximized: () => Promise<boolean>;
+      closeWindow: () => Promise<void>;
+      onWindowMaximizeChange: (
+        callback: (maximized: boolean) => void,
+      ) => () => void;
       getSafeStopStatus: () => Promise<unknown>;
       forceSafeStopShutdown: () => Promise<unknown>;
       completeSafeStopShutdown: () => Promise<void>;

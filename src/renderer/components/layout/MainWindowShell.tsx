@@ -30,6 +30,7 @@ export interface MainWindowShellProps {
   sideMenuItems: SideMenuItemConfig[];
   versionLabel: string;
   onSettings?: () => void;
+  onExit?: () => void;
   onVersionClick?: () => void;
   onRecipeActiveChange: (active: boolean) => void;
 }
@@ -39,6 +40,7 @@ export function MainWindowShell({
   sideMenuItems,
   versionLabel,
   onSettings,
+  onExit,
   onVersionClick,
   onRecipeActiveChange,
 }: MainWindowShellProps): ReactElement {
@@ -138,7 +140,7 @@ export function MainWindowShell({
 
   return (
     <div className="app-root">
-      <MenuBar onSettings={onSettings} />
+      <MenuBar onSettings={onSettings} onExit={onExit} />
       <div className="app-body">
         <SideMenu
           version={versionLabel}

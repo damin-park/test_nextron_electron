@@ -56,7 +56,7 @@ const createWindow = () => {
     useContentSize: true,
     minWidth: 1366,
     minHeight: 768,
-    autoHideMenuBar: true,
+    frame: false,
     show: false,
     backgroundColor: '#121212',
     title: 'Nextron Integrated Program',
@@ -65,8 +65,17 @@ const createWindow = () => {
     },
   });
 
-  // tkinter UI와 동일하게 앱 내부 메뉴바만 사용한다.
-  mainWindow.setMenuBarVisibility(false);
+  // 프레임리스 창: 최대화/복원 상태를 renderer 로 전달해 버튼 아이콘을 동기화한다.
+  const sendMaximizeState = (): void => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(
+        'window:maximize-changed',
+        mainWindow.isMaximized(),
+      );
+    }
+  };
+  mainWindow.on('maximize', sendMaximizeState);
+  mainWindow.on('unmaximize', sendMaximizeState);
 
   mainWindow.on('close', (event) => {
     if (shutdownAllowed) {
@@ -103,6 +112,26 @@ ipcMain.handle('backend:health', () => checkBackendHealth());
 ipcMain.handle('backend:get-connection', () => getBackendConnection());
 ipcMain.handle('backend:get-status', () => getBackendStatus());
 ipcMain.handle('app:request-shutdown', () => {
+  void beginAppShutdown();
+});
+
+// 커스텀 타이틀 바 창 컨트롤 (frameless window).
+ipcMain.handle('window:minimize', () => {
+  mainWindow?.minimize();
+});
+ipcMain.handle('window:toggle-maximize', () => {
+  if (!mainWindow) {
+    return false;
+  }
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
+  }
+  return mainWindow.isMaximized();
+});
+ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false);
+ipcMain.handle('window:close', () => {
   void beginAppShutdown();
 });
 ipcMain.handle('graph:save-png', async (_event, payload: unknown) => {

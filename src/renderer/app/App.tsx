@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { MainWindowShell } from '../components/layout/MainWindowShell';
 import { createDefaultSideMenuItems } from '../components/layout/sideMenuPreset';
-import { openSettings } from '../services/backendConnection';
+import { openSettings, requestAppShutdown } from '../services/backendConnection';
 import { getLabSettings, setLabEnabled } from '../services/systemSettingsClient';
 import { APP_VERSION } from '../../shared/app-version';
 import { RECIPE, type ControlMode } from '../shared/types/ui';
@@ -44,6 +44,10 @@ export function App(): ReactElement {
 
   const handleSettings = useCallback(() => {
     void openSettings();
+  }, []);
+
+  const handleExit = useCallback(() => {
+    void requestAppShutdown();
   }, []);
 
   const handleVersionClick = useCallback(() => {
@@ -107,6 +111,7 @@ export function App(): ReactElement {
       sideMenuItems={sideMenuItems}
       versionLabel={versionLabel}
       onSettings={handleSettings}
+      onExit={handleExit}
       onVersionClick={handleVersionClick}
       onRecipeActiveChange={setRecipeActive}
     />

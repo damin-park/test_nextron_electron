@@ -1,47 +1,121 @@
 /* ──────────────────────────────────────────────────────────
- * Menu Bar (component/menu.py)
+ * Title Bar (VS Code 스타일 커스텀 타이틀 바)
  * ────────────────────────────────────────────────────────── */
-.menu-bar__items {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  height: 100%;
+/* 메뉴 열림 시 바깥 클릭 감지용 백드롭 */
+.title-bar__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
 }
 
-.menu-bar__item {
+.title-bar__menus {
+  display: flex;
+  align-items: stretch;
+  -webkit-app-region: no-drag;
+  padding-left: 6px;
+  z-index: 1001;
+}
+
+.title-bar__menu {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.title-bar__menu-button {
   font-family: var(--font-medium);
   font-size: 13px;
   color: var(--md3-on-surface-variant);
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
-  cursor: default;
+  cursor: pointer;
   line-height: 1;
 }
 
-.menu-bar__item:not(:disabled) {
-  cursor: pointer;
-}
-
-.menu-bar__item:hover:not(:disabled) {
-  background: #3a3a3a;
+.title-bar__menu-button:hover,
+.title-bar__menu-button--active {
+  background: var(--md3-surface-container-highest);
   color: var(--md3-on-surface);
 }
 
-.menu-bar__item:disabled {
-  opacity: 1;
+.title-bar__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  padding: 4px 0;
+  background: var(--md3-surface-container-high);
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  z-index: 1002;
 }
 
-.menu-bar__spacer {
+.title-bar__dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-base);
+  font-size: 13px;
+  color: var(--md3-on-surface);
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.title-bar__dropdown-item:hover:not(:disabled) {
+  background: var(--md3-tertiary);
+  color: var(--md3-on-tertiary);
+}
+
+.title-bar__dropdown-item:disabled {
+  color: var(--md3-text-disabled);
+  cursor: default;
+}
+
+.title-bar__title {
   flex: 1 1 auto;
-}
-
-.menu-bar__version {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-medium);
   font-size: 12px;
-  color: var(--md3-text-disabled);
-  padding-right: 8px;
+  color: var(--md3-on-surface-variant);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.title-bar__controls {
+  display: flex;
+  align-items: stretch;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar__control {
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--md3-on-surface-variant);
+  cursor: pointer;
+}
+
+.title-bar__control:hover {
+  background: var(--md3-surface-container-highest);
+  color: var(--md3-on-surface);
+}
+
+.title-bar__control--close:hover {
+  background: #e81123;
+  color: #ffffff;
 }
 
 /* ──────────────────────────────────────────────────────────

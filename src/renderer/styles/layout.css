@@ -35,15 +35,17 @@ body {
   background: var(--md3-surface-container);
 }
 
-/* 메뉴바 (상단 full width) */
-.menu-bar {
+/* 커스텀 타이틀 바 (프레임리스 창, VS Code 스타일) */
+.title-bar {
   flex: 0 0 var(--menu-height);
   height: var(--menu-height);
   display: flex;
-  align-items: center;
+  align-items: stretch;
   background: var(--md3-surface-container-high);
   border-bottom: 1px solid var(--md3-outline-variant);
-  padding: 0 6px;
+  -webkit-app-region: drag;
+  position: relative;
+  z-index: 1000;
 }
 
 /* 본문: 좌측 사이드메뉴 + 우측 메인콘텐츠 */

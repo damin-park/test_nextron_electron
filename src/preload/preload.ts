@@ -21,6 +21,24 @@ contextBridge.exposeInMainWorld('nextron', {
     ipcRenderer.invoke('backend:get-status'),
   requestAppShutdown: (): Promise<void> =>
     ipcRenderer.invoke('app:request-shutdown'),
+  // 커스텀 타이틀 바 창 컨트롤.
+  minimizeWindow: (): Promise<void> => ipcRenderer.invoke('window:minimize'),
+  toggleMaximizeWindow: (): Promise<boolean> =>
+    ipcRenderer.invoke('window:toggle-maximize'),
+  isWindowMaximized: (): Promise<boolean> =>
+    ipcRenderer.invoke('window:is-maximized'),
+  closeWindow: (): Promise<void> => ipcRenderer.invoke('window:close'),
+  onWindowMaximizeChange: (
+    callback: (maximized: boolean) => void,
+  ): (() => void) => {
+    const listener = (_event: unknown, maximized: boolean) => {
+      callback(maximized);
+    };
+    ipcRenderer.on('window:maximize-changed', listener);
+    return () => {
+      ipcRenderer.removeListener('window:maximize-changed', listener);
+    };
+  },
   getSafeStopStatus: (): Promise<unknown> =>
     ipcRenderer.invoke('safe-stop:get-status'),
   forceSafeStopShutdown: (): Promise<unknown> =>
